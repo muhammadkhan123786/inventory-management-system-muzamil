@@ -1,0 +1,84 @@
+<html>
+<head>
+  <style>
+    :root { --humber-blue: #002f6c; --accent: #ff6b00; --text: #333; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 30px; color: var(--text); }
+    
+    .header-table { width: 100%; border-bottom: 3px solid var(--humber-blue); margin-bottom: 30px; }
+    .company-name { font-size: 26px; font-weight: bold; color: var(--humber-blue); }
+    
+    .summary-box { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 13px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+    th { background: var(--humber-blue); color: white; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 12px; word-wrap: break-word; vertical-align: top; }
+    
+    .supplier-info { color: #555; line-height: 1.4; }
+    .status-pill { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; }
+    .cancelled { background: #ffebee; color: #c62828; }
+    .active { background: #e8f5e9; color: #2e7d32; }
+
+    .item-row { background: #f9f9f9; font-size: 11px; color: #666; }
+    .footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 10px; color: #999; }
+  </style>
+</head>
+<body>
+
+  <table class="header-table">
+    <tr>
+      <td>
+        <div class="company-name">{{companyName}}</div>
+        <div style="font-size: 12px; color: #666;">Official Purchase Records</div>
+      </td>
+      <td style="text-align: right;">
+        <h2 style="margin: 0;">{{reportTitle}}</h2>
+        <p style="margin: 0; font-size: 12px;">Generated: {{generatedAt}}</p>
+      </td>
+    </tr>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th width="20%">Order Details</th>
+        <th width="35%">Supplier Information</th>
+        <th width="15%">Status</th>
+        <th width="15%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each orders}}
+      <tr>
+        <td>
+          <strong>{{this.orderNumber}}</strong><br>
+          <span style="font-size: 10px;">Date: {{this.orderDate}}</span>
+        </td>
+        <td class="supplier-info">
+          <strong>{{this.supplier.supplierIdentification.legalBusinessName}}</strong><br>
+          Attn: {{this.supplier.contactInformation.primaryContactName}}<br>
+          Email: {{this.supplier.contactInformation.emailAddress}}<br>
+          Loc: {{this.supplier.businessAddress.city.name}}, {{this.supplier.businessAddress.state}}
+        </td>
+        <td>
+          <span class="status-pill {{this.status}}">{{this.status}}</span>
+        </td>
+        <td>
+          <strong style="color: var(--humber-blue); font-size: 14px;">${{this.total}}</strong><br>
+          <span style="font-size: 10px; color: #999;">Tax: ${{this.tax}}</span>
+        </td>
+      </tr>
+      <tr class="item-row">
+        <td colspan="4">
+          <strong>Notes:</strong> {{#if this.notes}}{{this.notes}}{{else}}No additional instructions provided.{{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Humber Mobility Scooter | Confidential Report | Page 1 of 1
+  </div>
+
+</body>
+</html>

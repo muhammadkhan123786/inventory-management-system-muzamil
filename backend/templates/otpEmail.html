@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OTP Verification</title>
+  <style>
+    body { font-family: Arial; background-color: #f4f6f8; margin:0; }
+    .container { max-width:600px; margin:50px auto; padding:30px; background:#fff; border-radius:10px; text-align:center; }
+    h1 { color:#333; }
+    .otp-code { font-size:32px; color:#007bff; letter-spacing:10px; font-weight:bold; margin:20px 0; }
+    .button { background:#007bff; color:#fff; padding:12px 25px; border-radius:6px; text-decoration:none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OTP Verification</h1>
+    <p>Please use the following OTP to reset your password. The code is valid for 5 minutes.</p>
+    <div class="otp-code">{{OTP_CODE}}</div>
+    <a href="#" class="button">Verify OTP</a>
+    <p>If you did not request this, please ignore this email.</p>
+  </div>
+</body>
+</html>

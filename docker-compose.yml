@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: humber_mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: node_backend
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/humber
+      - NODE_ENV=production
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: nextjs_frontend
+    ports:
+      - "7000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:

@@ -1,0 +1,105 @@
+<html>
+<head>
+  <style>
+    :root { --grn-teal: #0d9488; --accent: #0f766e; --text: #333; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 30px; color: var(--text); }
+    .header-table { width: 100%; border-bottom: 3px solid var(--grn-teal); margin-bottom: 30px; }
+    .company-name { font-size: 26px; font-weight: bold; color: var(--grn-teal); }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+    th { background: var(--grn-teal); color: white; padding: 12px; text-align: left; font-size: 11px; text-transform: uppercase; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 12px; word-wrap: break-word; }
+    
+    /* Fix for the messy spacing */
+    .condition-cell { display: flex; flex-direction: column; gap: 6px; }
+    
+    .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f0fdfa; padding: 15px; border-radius: 8px; }
+    .info-item { font-size: 12px; }
+    .status-pill { padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: bold; background: #ccfbf1; color: #115e59; display: inline-block; width: fit-content; }
+
+    /* Style for the Totals Row */
+    .totals-row { background: #f8fafc; font-weight: bold; border-top: 2px solid var(--grn-teal); }
+
+    .footer { position: fixed; bottom: 20px; width: 100%; text-align: center; font-size: 10px; color: #999; }
+  </style>
+</head>
+<body>
+
+  <table class="header-table">
+    <tr>
+      <td>
+        <div class="company-name">{{companyName}}</div>
+        <div style="font-size: 12px; color: #666;">Goods Received Records</div>
+      </td>
+      <td style="text-align: right;">
+        <h2 style="margin: 0;">{{reportTitle}}</h2>
+        <p style="margin: 0; font-size: 12px;">Generated: {{generatedAt}}</p>
+      </td>
+    </tr>
+  </table>
+
+  <div class="info-grid">
+    <div class="info-item">
+        <strong>GRN Details:</strong><br>
+        No: {{grn.grnNumber}}<br>
+        Received: {{grn.receivedDate}}<br>
+        By: {{grn.receivedBy}}
+    </div>
+    <div class="info-item">
+        <strong>Source PO:</strong><br>
+        PO No: {{grn.purchaseOrderId.orderNumber}}<br>
+        Supplier: {{grn.purchaseOrderId.supplier.contactInformation.primaryContactName}}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th width="30%">Condition / Notes</th>
+        <th width="14%">Received</th>
+        <th width="14%">Accepted</th>
+        <th width="14%">Rejected</th>
+        <th width="14%">Damaged</th>
+        <th width="14%">Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each grn.items}}
+      <tr>
+        <td>
+          <div class="condition-cell">
+            <span class="status-pill">{{this.condition}}</span>
+            <small style="color:#666; display: block;">{{this.notes}}</small>
+          </div>
+        </td>
+        <td>{{this.receivedQuantity}}</td>
+        <td style="color: green; font-weight: bold;">{{this.acceptedQuantity}}</td>
+        <td style="color: #c62828;">{{this.rejectedQuantity}}</td>
+        <td style="color: #ea580c;">{{this.damageQuantity}}</td>
+        <td>${{this.unitPrice}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+    {{!-- <tfoot>
+      <tr class="totals-row">
+        <td style="text-align: right; padding-right: 20px;">TOTALS:</td>
+        <td>{{totals.received}}</td>
+        <td style="color: green;">{{totals.accepted}}</td>
+        <td style="color: #c62828;">{{totals.rejected}}</td>
+        <td style="color: #ea580c;">{{totals.damaged}}</td>
+        <td>-</td>
+      </tr>
+    </tfoot> --}}
+  </table>
+
+  <div style="margin-top: 30px; font-size: 12px;">
+    <strong>General Notes:</strong><br>
+    {{#if grn.notes}}{{grn.notes}}{{else}}No additional discrepancies or notes provided.{{/if}}
+  </div>
+
+  <div class="footer">
+    Humber Mobility Scooter | Warehouse Management System | Page 1 of 1
+  </div>
+
+</body>
+</html>

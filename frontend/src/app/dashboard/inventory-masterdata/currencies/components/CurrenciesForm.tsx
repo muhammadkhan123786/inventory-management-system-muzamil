@@ -1,0 +1,156 @@
+"use client";
+import React, { useEffect } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Save, Coins } from "lucide-react";
+import { z } from "zod";
+import { FormModal } from "@/app/common-form/FormModal";
+import { FormInput } from "@/app/common-form/FormInput";
+import { FormToggle } from "@/app/common-form/FormToggle";
+import { FormButton } from "@/app/common-form/FormButton";
+import { ICurrency } from "../../../../../../../common/ICurrency.interface";
+import { useFormActions } from "@/hooks/useFormActions";
+
+const currencySchemaValidation = z.object({
+    currencyName: z.string().min(1, "Currency name is required."),
+    currencySymbol: z.string().min(1, "Symbol is required."),
+    isActive: z.boolean(),
+    isDefault: z.boolean(),
+});
+
+type FormData = z.infer<typeof currencySchemaValidation>;
+
+interface Props {
+    editingData: (ICurrency & { _id?: string }) | null;
+    onClose: () => void;
+    onRefresh: () => void; // Optional in usage
+    themeColor: string;
+}
+
+const CurrenciesForm = ({ editingData, onClose, themeColor }: Props) => {
+    // Use the hook for mutations
+    const { createItem, updateItem, isSaving } = useFormActions(
+        "/currencies",
+        "currencies",
+        "Currency"
+    );
+    const {
+        register,
+        handleSubmit,
+        reset,
+        control,
+        setValue,
+        formState: { errors },
+    } = useForm<FormData>({
+        resolver: zodResolver(currencySchemaValidation),
+        defaultValues: {
+            currencyName: "",
+            currencySymbol: "",
+            isActive: true,
+            isDefault: false,
+        },
+    });
+
+    const isDefaultValue = useWatch({ control, name: "isDefault" });
+
+    useEffect(() => {
+        if (editingData) {
+            reset({
+                currencyName: editingData.currencyName,
+                currencySymbol: editingData.currencySymbol,
+                isActive: Boolean(editingData.isActive),
+                isDefault: Boolean(editingData.isDefault),
+            });
+        }
+    }, [editingData, reset]);
+
+    const onSubmit = async (values: FormData) => {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : {};
+        const payload = { ...values, userId: user.id || user._id };
+
+        if (editingData?._id) {
+            // Update Mutation
+            updateItem(
+                { id: editingData._id, payload },
+                {
+                    onSuccess: () => {
+                        onClose(); // List will refresh automatically
+                    }
+                }
+            );
+        } else {
+            // Create Mutation
+            createItem(payload, {
+                onSuccess: () => {
+                    onClose(); // List will refresh automatically
+                }
+            });
+        }
+    };
+
+    return (
+        <FormModal
+            title={editingData ? "Edit Currency" : "Add New Currency"}
+            icon={<Coins size={24} />}
+            onClose={onClose}
+            themeColor={themeColor}
+        >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-4">
+                <FormInput
+                    label="Currency Name *"
+                    placeholder="e.g. US Dollar"
+                    {...register("currencyName")}
+                    error={errors.currencyName?.message}
+                />
+
+                <FormInput
+                    label="Currency Symbol *"
+                    placeholder="e.g. $"
+                    {...register("currencySymbol")}
+                    error={errors.currencySymbol?.message}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                    <Controller
+                        control={control}
+                        name="isActive"
+                        render={({ field }) => (
+                            <FormToggle
+                                label="Active"
+                                checked={field.value}
+                                onChange={field.onChange}
+                                disabled={isDefaultValue}
+                            />
+                        )}
+                    />
+                    <Controller
+                        control={control}
+                        name="isDefault"
+                        render={({ field }) => (
+                            <FormToggle
+                                label="Default"
+                                checked={field.value}
+                                onChange={(val) => {
+                                    field.onChange(val);
+                                    if (val) setValue("isActive", true);
+                                }}
+                            />
+                        )}
+                    />
+                </div>
+
+                <FormButton
+                    type="submit"
+                    label={editingData ? "Update Currency" : "Create"}
+                    icon={<Save size={20} />}
+                    loading={isSaving}
+                    themeColor={themeColor}
+                    onCancel={onClose}
+                />
+            </form>
+        </FormModal>
+    );
+};
+
+export default CurrenciesForm;

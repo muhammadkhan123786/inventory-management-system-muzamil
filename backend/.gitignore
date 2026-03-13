@@ -1,0 +1,124 @@
+# =========================
+# Node
+# =========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# TypeScript
+# =========================
+dist/
+build/
+*.tsbuildinfo
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Coverage / Tests
+# =========================
+coverage/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# IntelliJ / WebStorm
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+
+# =========================
+# Uploads / Generated files
+# =========================
+uploads/
+public/uploads/
+
+# =========================
+# Docker (optional)
+# =========================
+docker-data/
+# =========================
+# Node
+# =========================
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# TypeScript
+# =========================
+dist/
+build/
+*.tsbuildinfo
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# Coverage / Tests
+# =========================
+coverage/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# IntelliJ / WebStorm
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
+
+# =========================
+# Uploads / Generated files
+# =========================
+uploads/
+public/uploads/
+
+# =========================
+# Docker (optional)
+# =========================
+docker-data/
