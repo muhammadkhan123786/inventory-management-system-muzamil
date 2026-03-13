@@ -1,35 +1,52 @@
 #!/bin/bash
 
-PROJECT_NAME="inventory-management-system-muzamil"
-PROJECT_PATH="/var/www/inventory-management-system-muzamil"
+# -----------------------------
+# 🚀 Deployment Script (Inventory Project)
+# -----------------------------
 
-cd $PROJECT_PATH || exit 1
+# Set project root
+cd /var/www/inventory-management-system-muzamil || exit 1
+PROJECT_ROOT=$(pwd)
+echo "📌 Project root: $PROJECT_ROOT"
 
-echo "🚀 Deploying $PROJECT_NAME"
-
+# Step 1: Pull latest code
 echo "📌 Pulling latest code..."
 git fetch origin main
 git reset --hard origin/main
+echo "✅ Latest code pulled."
 
+# Step 2: Stop old containers
 echo "📌 Stopping old containers..."
-docker compose down
+docker stop inventory_backend inventory_frontend inventory_mongo 2>/dev/null || true
+docker rm inventory_backend inventory_frontend inventory_mongo 2>/dev/null || true
+echo "✅ Containers stopped."
 
-echo "📌 Building containers..."
+# Step 3: Ensure uploads folder exists
+UPLOADS_DIR="./backend/uploads"
+if [ ! -d "$UPLOADS_DIR" ]; then
+    echo "⚠️ Creating uploads folder..."
+    mkdir -p "$UPLOADS_DIR"
+    chmod 775 "$UPLOADS_DIR"
+else
+    echo "✅ Uploads folder exists."
+fi
+
+# Step 4: Build & start containers
+echo "📌 Building and starting containers..."
 docker compose build --no-cache
-
-echo "📌 Starting containers..."
 docker compose up -d
+echo "✅ Containers started."
 
-echo "📌 Running containers:"
-docker ps
+# Step 5: Show active containers
+echo "📌 Active containers:"
+docker ps --filter "name=inventory"
+
+# Step 6: Show backend logs (last 50 lines)
+echo "----------------------------------------"
+echo "📄 Backend logs (last 50 lines)"
+echo "----------------------------------------"
+docker logs inventory_backend --tail=50
 
 echo "----------------------------------------"
-echo "📄 Backend logs"
-docker compose logs backend --tail=50
-
+echo "✅ Deployment finished successfully!"
 echo "----------------------------------------"
-echo "📄 Frontend logs"
-docker compose logs frontend --tail=50
-
-echo "----------------------------------------"
-echo "✅ Deployment completed!"
