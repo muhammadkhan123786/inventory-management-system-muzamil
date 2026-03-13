@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROJECT_NAME="inventory-management-system-muzamil"
-PROJECT_PATH="/var/www/inventory-management-system-muzamil"
+PROJECT_PATH="/var/www/inventory-system"
 
 cd $PROJECT_PATH || exit 1
 
