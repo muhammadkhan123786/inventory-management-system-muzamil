@@ -689,7 +689,6 @@
 
 
 // services/stock.service.ts
-// COMPLETE FIXED VERSION
 import { ProductModal }  from "../models/product.models";
 import { PurchaseOrder } from "../models/purchaseOrder.model";
 import { GrnModel }      from "../models/grn.models";
@@ -712,8 +711,7 @@ export interface StockResult {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 1: MongoDB mein stock update karo
-// arrayFilters se sirf matching SKU ki qty change hoti hai
+// Core stock updater
 // ─────────────────────────────────────────────────────────────────────────────
 async function applyStockDeltas(deltas: StockDelta[]): Promise<StockResult> {
   const result: StockResult = { success: true, updated: [], skipped: [], errors: [] };
@@ -722,22 +720,49 @@ async function applyStockDeltas(deltas: StockDelta[]): Promise<StockResult> {
     try {
       console.log(`[Stock] Updating sku=${sku}, delta=${delta > 0 ? "+" : ""}${delta}`);
 
+      // ── Pehle product dhundo by _id ──────────────────────────────────────
+      // GRN mein product root-level sku hoti hai, attributes[].sku alag hoti hai
+      // isliye "attributes.sku" se match nahi karta
+      const product = await ProductModal.findOne({ _id: productId }).lean() as any;
+
+      if (!product) {
+        result.skipped.push(sku);
+        console.warn(`[Stock] ⚠️ Product not found | productId=${productId}`);
+        continue;
+      }
+
+      // ── Attributes mein se pehla wala use karo (ya supplierId se match karo) ──
+      // Agar single variant hai → index 0
+      // Agar multiple variants hain → supplierId se match karo
+      const attrs: any[] = product.attributes ?? [];
+
+      // Try: supplierId se match karo (most accurate)
+      // Fallback: pehla attribute
+      let targetIndex = attrs.findIndex(
+        (a: any) => String(a.stock?.supplierId) === String(productId)
+      );
+      if (targetIndex === -1) targetIndex = 0; // fallback to first
+
+      if (attrs.length === 0) {
+        result.skipped.push(sku);
+        console.warn(`[Stock] ⚠️ No attributes found for product | productId=${productId}`);
+        continue;
+      }
+
+      // ── Direct index se update karo ──────────────────────────────────────
       const res = await ProductModal.updateOne(
-        { _id: productId, "attributes.sku": sku },
-        { $inc: { "attributes.$[variant].stock.stockQuantity": delta } },
-        { arrayFilters: [{ "variant.sku": sku }] }
+        { _id: productId },
+        { $inc: { [`attributes.${targetIndex}.stock.stockQuantity`]: delta } }
       );
 
       console.log(`[Stock] matchedCount=${res.matchedCount} modifiedCount=${res.modifiedCount}`);
 
       if (res.matchedCount === 0) {
-        // Product ya SKU nahi mila
         result.skipped.push(sku);
-        console.warn(`[Stock] ⚠️ SKU not found in product | sku=${sku} productId=${productId}`);
+        console.warn(`[Stock] ⚠️ Product/SKU not found | sku=${sku} productId=${productId}`);
       } else if (res.modifiedCount === 0) {
-        // Match mila but update nahi hua — arrayFilter match nahi kiya
         result.skipped.push(sku);
-        console.warn(`[Stock] ⚠️ Matched but not modified | sku=${sku} — check arrayFilter`);
+        console.warn(`[Stock] ⚠️ Matched but not modified | sku=${sku} — stock path check karo`);
       } else {
         result.updated.push(sku);
         console.log(`[Stock] ✅ ${reason} | sku=${sku} | ${delta > 0 ? "+" : ""}${delta}`);
@@ -753,15 +778,7 @@ async function applyStockDeltas(deltas: StockDelta[]): Promise<StockResult> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 2: PO status auto-sync
-//
-// LOGIC:
-//   Har GRN ke baad check karo — kya puri order aa gayi?
-//   orderedQty vs acceptedQty compare karo (productId se)
-//
-//   fully received → PO "received"
-//   partial        → PO "ordered" (unchanged)
-//   cancelled      → KABHI MAT CHHO
+// PO status auto-sync
 // ─────────────────────────────────────────────────────────────────────────────
 async function syncPOStatus(poId: string): Promise<void> {
   try {
@@ -770,27 +787,17 @@ async function syncPOStatus(poId: string): Promise<void> {
       GrnModel.find({ purchaseOrderId: poId }).lean(),
     ]);
 
-    if (!po) {
-      console.warn(`[Stock] ⚠️ PO not found: ${poId}`);
-      return;
-    }
+    if (!po) { console.warn(`[Stock] ⚠️ PO not found: ${poId}`); return; }
 
     const currentStatus = (po as any).status;
+    if (currentStatus === "cancelled") return;
 
-    // Cancelled PO kabhi update mat karo
-    if (currentStatus === "cancelled") {
-      console.log(`[Stock] ⏭️ PO ${(po as any).orderNumber} is cancelled — skip`);
-      return;
-    }
-
-    // PO mein kya order kiya tha — productId → qty
     const orderedMap: Record<string, number> = {};
     for (const item of (po as any).items ?? []) {
       const key = String(item.productId);
       orderedMap[key] = (orderedMap[key] || 0) + (item.quantity || 0);
     }
 
-    // Saare GRNs mein se kitna accept hua — productId → acceptedQty
     const receivedMap: Record<string, number> = {};
     for (const grn of allGRNs) {
       for (const item of (grn as any).items ?? []) {
@@ -803,17 +810,11 @@ async function syncPOStatus(poId: string): Promise<void> {
     const fullyMet = keys.length > 0 && keys.every(k => (receivedMap[k] || 0) >= orderedMap[k]);
     const anyMet   = keys.some(k => (receivedMap[k] || 0) > 0);
 
-    let newStatus: string;
-    if (fullyMet)     newStatus = "received";  // sab aa gaya
-    else if (anyMet)  newStatus = "ordered";   // kuch aaya, baaki abhi bhi wait
-    else              return;                  // kuch bhi nahi aaya — mat chho
+    const newStatus = fullyMet ? "received" : anyMet ? "ordered" : null;
+    if (!newStatus || newStatus === currentStatus) return;
 
-    if (newStatus !== currentStatus) {
-      await PurchaseOrder.updateOne({ _id: poId }, { $set: { status: newStatus } });
-      console.log(`[Stock] 🔄 PO ${(po as any).orderNumber}: "${currentStatus}" → "${newStatus}"`);
-    } else {
-      console.log(`[Stock] ℹ️ PO ${(po as any).orderNumber} status unchanged: "${currentStatus}"`);
-    }
+    await PurchaseOrder.updateOne({ _id: poId }, { $set: { status: newStatus } });
+    console.log(`[Stock] 🔄 PO ${(po as any).orderNumber}: "${currentStatus}" → "${newStatus}"`);
 
   } catch (err: any) {
     console.error("[Stock] ⚠️ syncPOStatus failed:", err.message);
@@ -821,8 +822,7 @@ async function syncPOStatus(poId: string): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 3: Discrepancy email to supplier
-// Sirf jab GRN mein rejected ya damaged items hon
+// Discrepancy email
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendGRNDiscrepancyEmail(grn: any, po: any): Promise<void> {
   try {
@@ -903,7 +903,7 @@ async function sendGRNDiscrepancyEmail(grn: any, po: any): Promise<void> {
           <div style="margin-top:24px;padding:16px;background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;">
             <p style="margin:0;font-weight:600;color:#92400e;">Action Required</p>
             <p style="margin:8px 0 0;color:#78350f;font-size:14px;">
-              Please arrange replacement or credit note for the affected units.
+              Please arrange replacement or credit note.
               Reference: <strong>${grn.grnNumber}</strong>
             </p>
           </div>
@@ -926,90 +926,26 @@ async function sendGRNDiscrepancyEmail(grn: any, po: any): Promise<void> {
 
     console.log(`[Stock] 📧 Discrepancy email → ${supplierEmail}`);
   } catch (err: any) {
-    // Email fail hone se stock update BLOCK nahi hona chahiye
     console.error("[Stock] ⚠️ Discrepancy email failed:", err.message);
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC: GRN se stock apply karo
-// Flow: Stock update → PO status sync → Discrepancy email
 // ─────────────────────────────────────────────────────────────────────────────
-  // export async function applyGRNToStock(grnId: string): Promise<StockResult> {
-  //   try {
-  //     console.log(`[Stock] 🚀 applyGRNToStock START | grnId=${grnId}`);
-
-  //     const grn = await GrnModel.findById(grnId).lean() as any;
-  //     if (!grn) throw new Error(`GRN not found: ${grnId}`);
-
-  //     console.log(`[Stock] GRN found: ${grn.grnNumber} | items: ${grn.items?.length}`);
-  //     console.log(`[Stock] Items:`, grn.items?.map((i: any) => ({
-  //       sku: i.sku, productId: i.productId, accepted: i.acceptedQuantity
-  //     })));
-
-  //     // ── STEP 1: Stock update ──────────────────────────────────────────────
-  //     const deltas: StockDelta[] = (grn.items ?? [])
-  //       .filter((item: any) => (item.acceptedQuantity || 0) > 0)
-  //       .map((item: any) => ({
-  //         productId: String(item.productId),
-  //         sku:       item.sku,
-  //         delta:     item.acceptedQuantity,
-  //         reason:    `GRN ${grn.grnNumber}`,
-  //       }));
-
-  //     if (deltas.length === 0) {
-  //       console.warn(`[Stock] ⚠️ No accepted items in GRN ${grn.grnNumber} — nothing to update`);
-  //     }
-
-  //     const result = deltas.length > 0
-  //       ? await applyStockDeltas(deltas)
-  //       : { success: true, updated: [], skipped: [], errors: [] };
-
-  //     // ── STEP 2: PO status smart sync ─────────────────────────────────────
-  //     // PARTIAL delivery → stays "ordered"
-  //     // FULL delivery    → becomes "received"
-  //     await syncPOStatus(String(grn.purchaseOrderId));
-
-  //     // ── STEP 3: Discrepancy email (fire & forget — never block stock) ─────
-  //     const hasDiscrepancy = (grn.items ?? []).some(
-  //       (item: any) => (item.rejectedQuantity || 0) > 0 || (item.damageQuantity || 0) > 0
-  //     );
-
-  //     if (hasDiscrepancy) {
-  //       const po = await PurchaseOrder
-  //         .findById(grn.purchaseOrderId)
-  //         .populate("supplier", "contactInformation supplierIdentification")
-  //         .lean();
-  //       if (po) {
-  //         sendGRNDiscrepancyEmail(grn, po).catch(err =>
-  //           console.error("[Stock] Discrepancy email error:", err.message)
-  //         );
-  //       }
-  //     }
-
-  //     console.log(`[Stock] ✅ applyGRNToStock DONE | updated=${result.updated} skipped=${result.skipped}`);
-  //     return result;
-
-  //   } catch (err: any) {
-  //     console.error(`[Stock] ❌ applyGRNToStock FAILED:`, err.message);
-  //     return { success: false, updated: [], skipped: [], errors: [err.message] };
-  //   }
-  // }
-
-
-  export async function applyGRNToStock(grnId: string): Promise<StockResult> {
+export async function applyGRNToStock(grnId: string): Promise<StockResult> {
   try {
-    console.log(`[Stock] 🚀 applyGRNToStock START | grnId=${grnId}`);
+    console.log(`[Stock] 🚀 START | grnId=${grnId}`);
 
     const grn = await GrnModel.findById(grnId).lean() as any;
     if (!grn) throw new Error(`GRN not found: ${grnId}`);
 
-    console.log(`[Stock] GRN found: ${grn.grnNumber} | items: ${grn.items?.length}`);
+    console.log(`[Stock] GRN: ${grn.grnNumber} | items: ${grn.items?.length}`);
     console.log(`[Stock] Items:`, grn.items?.map((i: any) => ({
-      sku: i.sku, productId: i.productId, accepted: i.acceptedQuantity
+      sku: i.sku, productId: i.productId, accepted: i.acceptedQuantity,
     })));
 
-    // ── STEP 1: Stock update ─────────────────────────────── UNCHANGED ────
+    // ── STEP 1: Stock update ──────────────────────────────────────────────
     const deltas: StockDelta[] = (grn.items ?? [])
       .filter((item: any) => (item.acceptedQuantity || 0) > 0)
       .map((item: any) => ({
@@ -1020,49 +956,36 @@ async function sendGRNDiscrepancyEmail(grn: any, po: any): Promise<void> {
       }));
 
     if (deltas.length === 0) {
-      console.warn(`[Stock] ⚠️ No accepted items in GRN ${grn.grnNumber} — nothing to update`);
+      console.warn(`[Stock] ⚠️ No accepted items — nothing to update`);
     }
 
     const result = deltas.length > 0
       ? await applyStockDeltas(deltas)
       : { success: true, updated: [], skipped: [], errors: [] };
 
-    // ── STEP 2: PO status smart sync ─────────────────────── UNCHANGED ───
+    // ── STEP 2: PO status sync ────────────────────────────────────────────
     await syncPOStatus(String(grn.purchaseOrderId));
 
-    // ── STEP 3: Discrepancy email ─────────────────────────── UNCHANGED ──
+    // ── STEP 3: Discrepancy email ─────────────────────────────────────────
     const hasDiscrepancy = (grn.items ?? []).some(
       (item: any) => (item.rejectedQuantity || 0) > 0 || (item.damageQuantity || 0) > 0
     );
-
     if (hasDiscrepancy) {
       const po = await PurchaseOrder
         .findById(grn.purchaseOrderId)
         .populate("supplier", "contactInformation supplierIdentification")
         .lean();
-      if (po) {
-        sendGRNDiscrepancyEmail(grn, po).catch(err =>
-          console.error("[Stock] Discrepancy email error:", err.message)
-        );
-      }
+      if (po) sendGRNDiscrepancyEmail(grn, po).catch(console.error);
     }
 
-    // ── STEP 4: ✅ NEW — Ledger DEBIT ─────────────────────────────────────
-    // GRN receive hua → hum supplier ke outstanding badha → DEBIT
-    // try/catch ensures ledger failure never blocks stock update
+    // ── STEP 4: Ledger DEBIT ──────────────────────────────────────────────
     try {
-      const po = await PurchaseOrder
-        .findById(grn.purchaseOrderId)
-        .select("supplier")
-        .lean() as any;
-
+      const po = await PurchaseOrder.findById(grn.purchaseOrderId).select("supplier").lean() as any;
       const supplierId = po?.supplier;
-
       const totalAmount =
         grn.totalAmount ||
-        (grn.items ?? []).reduce((sum: number, item: any) =>
-          sum + (item.acceptedQuantity || 0) * (item.unitPrice || 0), 0
-        );
+        (grn.items ?? []).reduce((s: number, i: any) =>
+          s + (i.acceptedQuantity || 0) * (i.unitPrice || 0), 0);
 
       if (supplierId && totalAmount > 0) {
         await createDebitEntry({
@@ -1074,32 +997,23 @@ async function sendGRNDiscrepancyEmail(grn: any, po: any): Promise<void> {
           notes:           `GRN received: ${grn.grnNumber}`,
           createdBy:       "system",
         });
-
-        console.log(
-          `[Stock] 💰 Ledger DEBIT | GRN: ${grn.grnNumber} | £${totalAmount} | Supplier: ${supplierId}`
-        );
-      } else {
-        console.warn(
-          `[Stock] ⚠️ Ledger DEBIT skipped — supplierId: ${supplierId}, totalAmount: ${totalAmount}`
-        );
+        console.log(`[Stock] 💰 Ledger DEBIT | ${grn.grnNumber} | £${totalAmount}`);
       }
     } catch (ledgerErr: any) {
-      console.error(`[Stock] ❌ Ledger DEBIT failed for ${grn.grnNumber}:`, ledgerErr.message);
+      console.error(`[Stock] ❌ Ledger DEBIT failed:`, ledgerErr.message);
     }
-    // ── END STEP 4 ────────────────────────────────────────────────────────
 
-    console.log(`[Stock] ✅ applyGRNToStock DONE | updated=${result.updated} skipped=${result.skipped}`);
+    console.log(`[Stock] ✅ DONE | updated=[${result.updated}] skipped=[${result.skipped}]`);
     return result;
 
   } catch (err: any) {
-    console.error(`[Stock] ❌ applyGRNToStock FAILED:`, err.message);
+    console.error(`[Stock] ❌ FAILED:`, err.message);
     return { success: false, updated: [], skipped: [], errors: [err.message] };
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC: Goods Return se stock kam karo
-// Sirf "completed" status pe call hota hai (controller se)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function applyReturnToStock(returnId: string): Promise<StockResult> {
   try {
@@ -1111,7 +1025,7 @@ export async function applyReturnToStock(returnId: string): Promise<StockResult>
       .map((item: any) => ({
         productId: String(item.productId),
         sku:       item.sku,
-        delta:     -item.returnQty,  // negative = stock kam hogi
+        delta:     -item.returnQty,
         reason:    `Return ${goodsReturn.grtnNumber}`,
       }));
 
