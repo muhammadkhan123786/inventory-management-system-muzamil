@@ -48,6 +48,63 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 // ── Delivery Status Badge — from expected delivery date ───────────────────────
+// const DeliveryStatusBadge = ({ order }: { order: IPurchaseOrder }) => {
+//   if (order.status === 'received') {
+//     return (
+//       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
+//         <PackageCheck className="h-3 w-3" /> Delivered
+//       </span>
+//     );
+//   }
+//   if (order.status === 'cancelled') {
+//     return (
+//       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-400 border-red-200">
+//         <XCircle className="h-3 w-3" /> Cancelled
+//       </span>
+//     );
+//   }
+//   if (order.status === 'draft') {
+//     return (
+//       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-400 border-slate-200">
+//         <Clock className="h-3 w-3" /> Not Ordered
+//       </span>
+//     );
+//   }
+
+//   // ordered → check expected delivery date
+ 
+//   const today    = new Date();
+//   const delivery = new Date(order.expectedDelivery as any);
+//   const diffDays = Math.ceil(
+//     (delivery.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+//   );
+
+//   if (diffDays < 0) return (
+//   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-600 border-red-200">
+//     <Clock className="h-3 w-3" />
+//     {Math.abs(diffDays) === 1
+//       ? "Overdue since yesterday"
+//       : `Overdue by ${Math.abs(diffDays)} days`}
+//   </span>
+// );
+//   if (diffDays === 0) return (
+//     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-orange-50 text-orange-600 border-orange-200">
+//       <Truck className="h-3 w-3" /> Due Today
+//     </span>
+//   );
+//   if (diffDays <= 3)  return (
+//     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-yellow-50 text-yellow-600 border-yellow-200">
+//       <Truck className="h-3 w-3" /> Due in {diffDays}d
+//     </span>
+//   );
+//   return (
+//     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-blue-50 text-blue-600 border-blue-200">
+//       <Truck className="h-3 w-3" /> In {diffDays} days
+//     </span>
+//   );
+// };
+
+
 const DeliveryStatusBadge = ({ order }: { order: IPurchaseOrder }) => {
   if (order.status === 'received') {
     return (
@@ -56,6 +113,7 @@ const DeliveryStatusBadge = ({ order }: { order: IPurchaseOrder }) => {
       </span>
     );
   }
+
   if (order.status === 'cancelled') {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-400 border-red-200">
@@ -63,42 +121,39 @@ const DeliveryStatusBadge = ({ order }: { order: IPurchaseOrder }) => {
       </span>
     );
   }
-  if (order.status === 'draft') {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-slate-100 text-slate-400 border-slate-200">
-        <Clock className="h-3 w-3" /> Not Ordered
-      </span>
-    );
-  }
 
-  // ordered → check expected delivery date
+  // ✅ draft aur ordered dono ke liye — delivery date check karo
   const today    = new Date();
   const delivery = new Date(order.expectedDelivery as any);
   const diffDays = Math.ceil(
     (delivery.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays < 0)  return (
+  if (diffDays < 0) return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-50 text-red-600 border-red-200">
       <Clock className="h-3 w-3" /> Overdue {Math.abs(diffDays)}d
     </span>
   );
+
   if (diffDays === 0) return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-orange-50 text-orange-600 border-orange-200">
       <Truck className="h-3 w-3" /> Due Today
     </span>
   );
-  if (diffDays <= 3)  return (
+
+  if (diffDays <= 3) return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-yellow-50 text-yellow-600 border-yellow-200">
       <Truck className="h-3 w-3" /> Due in {diffDays}d
     </span>
   );
+
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-blue-50 text-blue-600 border-blue-200">
       <Truck className="h-3 w-3" /> In {diffDays} days
     </span>
   );
 };
+
 
 // ── Supplier guard ────────────────────────────────────────────────────────────
 const isSupplierObject = (s: string | ISupplier): s is ISupplier =>
@@ -134,7 +189,8 @@ export const PurchaseOrderRow: React.FC<PurchaseOrderRowProps> = ({
 }) => {
   const canCancel  = CAN_CANCEL.includes(order.status);
   const isTerminal = IS_TERMINAL.includes(order.status);
-
+ console.log("order.expectedDelivery", order.expectedDelivery);
+  console.log("This component is mount ")
   return (
     <motion.tr
       initial={{ opacity: 0, y: 6 }}
