@@ -200,7 +200,6 @@ const productConfig = useMemo(
   () => getProductConfig(currencySymbol),
   [currencySymbol]
 );
-    console.log("currencySymbol", currencySymbol)
 
   // ─── React Hook Form Setup ─────────────────────────────────────────────
   const {
