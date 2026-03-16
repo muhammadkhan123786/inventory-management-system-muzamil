@@ -16,6 +16,8 @@ import { useReorderSuggestions, ReorderProduct } from '@/hooks/useReorderSuggest
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { BulkOrderGroup } from '@/helper/purchaseOrderApi';
 import { toast } from 'sonner';
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 // Severity Configuration
 const SEVERITY_CONFIG = {
@@ -64,6 +66,7 @@ export default function AlertsPage() {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [showProposals, setShowProposals] = useState(false);
   const [isCreatingBulk, setIsCreatingBulk] = useState(false);
+  const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   // Get the bulk order handler from usePurchaseOrders
   const {
@@ -517,6 +520,7 @@ export default function AlertsPage() {
         products={reorderProducts}
         onCreateOrders={handleCreateOrders}
         isCreating={isCreatingBulk || isFetchingReorder}
+        currencySymbol = { currencySymbol}
       />
     </div>
   );

@@ -1064,6 +1064,7 @@ const productConfig = useMemo(
         products={reorderProducts}
         onCreateOrders={handleCreateBulkOrders}
         isCreating={isCreatingBulk}
+        currencySymbol = { currencySymbol}
         //  onOpenChange={handleProposalsClose} 
       />
     </>
