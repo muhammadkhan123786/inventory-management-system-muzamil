@@ -46,13 +46,13 @@ export function SupplierHeader({ name, businessName, isActive, supplierId, email
             <span className="text-sm font-medium">Back to Suppliers</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => router.push(`/dashboard/suppliers/${supplierId}/edit`)}
             className="flex items-center gap-2 px-4 py-2 bg-white/15 hover:bg-white/25 border border-white/25 text-white rounded-xl text-sm font-semibold transition-all backdrop-blur-sm"
           >
             <Edit className="h-4 w-4" />
             Edit Supplier
-          </button>
+          </button> */}
         </div>
 
         {/* White card */}

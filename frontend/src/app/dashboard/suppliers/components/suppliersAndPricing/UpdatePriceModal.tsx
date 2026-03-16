@@ -23,6 +23,7 @@ interface Props {
   currentPrice:  number;
   userId:        string;
   onSuccess:     () => void;
+  currencySymbol: string;
 }
 
 export function UpdatePriceModal({
@@ -30,6 +31,7 @@ export function UpdatePriceModal({
   supplierId, supplierName,
   productId, productName, sku,
   currentPrice, userId, onSuccess,
+  currencySymbol,
 }: Props) {
   const [newPrice, setNewPrice] = useState<string>(String(currentPrice));
   const [reason,   setReason]   = useState("");
@@ -52,7 +54,7 @@ export function UpdatePriceModal({
         changeReason: reason, userId,
       }, { headers: { Authorization: `Bearer ${token}` } });
 
-      toast.success(`Price updated: £${currentPrice} → £${num}`);
+      toast.success(`Price updated: ${currencySymbol}${currentPrice} → ${currencySymbol}${num}`);
       onSuccess();
       onOpenChange(false);
       setReason("");
@@ -84,17 +86,17 @@ export function UpdatePriceModal({
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400">Current</p>
-              <p className="font-bold text-gray-900">£{currentPrice.toFixed(2)}</p>
+              <p className="font-bold text-gray-900">{currencySymbol}{currentPrice.toFixed(2)}</p>
             </div>
           </div>
 
           {/* New price input */}
           <div>
             <Label className="text-sm font-semibold text-gray-700 mb-1.5 block">
-              New Cost Price (£) <span className="text-red-500">*</span>
+              New Cost Price ({currencySymbol}) <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">£</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">{currencySymbol}</span>
               <Input
                 type="number" step="0.01" min="0.01"
                 value={newPrice}
@@ -113,7 +115,7 @@ export function UpdatePriceModal({
               {isUp ? <TrendingUp className="h-5 w-5 shrink-0" /> : <TrendingDown className="h-5 w-5 shrink-0" />}
               <span>
                 {isUp ? "Price increase" : "Price decrease"} of{" "}
-                <strong>£{Math.abs(diff).toFixed(2)}</strong>
+                <strong>{currencySymbol}{Math.abs(diff).toFixed(2)}</strong>
                 {" "}({isUp ? "+" : "-"}{Math.abs(pct).toFixed(1)}%)
               </span>
             </div>

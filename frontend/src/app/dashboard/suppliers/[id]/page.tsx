@@ -23,10 +23,13 @@ import { ReturnsTab } from "./components/tabs/ReturnsTab";
 import { SupplierPricingTab } from "./components/tabs/PricingTab";
 import  PaymentsTab  from "./components/tabs/PaymentsTab";
 import axios from "axios";
+import { useCurrencyStore } from "@/stores/currency.store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export default function SupplierDetailPage() {
+      const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+  
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
@@ -165,7 +168,7 @@ export default function SupplierDetailPage() {
               {
                 icon: DollarSign,
                 label: "Total Value",
-                value: `£${stats.totalValue.toLocaleString()}`,
+                value: `${currencySymbol}${stats.totalValue.toLocaleString()}`,
                 gradient: "from-purple-500 to-purple-600",
                 glow: "from-purple-400 to-purple-600",
                 bg: "from-purple-50 to-purple-100/50",
@@ -276,18 +279,19 @@ export default function SupplierDetailPage() {
                     supplierId={supplier._id}
                     supplierName={name}
                     userId={userId}
+                    currencySymbol = { currencySymbol }
                   />
                 )}
 
                 {activeTab === "orders" && (
-                  <OrdersTab supplierId={supplier._id} userId={userId} />
+                  <OrdersTab supplierId={supplier._id} userId={userId} currencySymbol = { currencySymbol } />
                 )}
 
                 {activeTab === "returns" && (
-                  <ReturnsTab supplierId={supplier._id} userId={userId} />
+                  <ReturnsTab supplierId={supplier._id} userId={userId} currencySymbol = { currencySymbol } />
                 )}
                {activeTab === "payment" && (
-              <PaymentsTab supplierId={supplier._id}  supplierName={name}
+              <PaymentsTab supplierId={supplier._id}  supplierName={name} currencySymbol = { currencySymbol }
  />
             )}
               </div>

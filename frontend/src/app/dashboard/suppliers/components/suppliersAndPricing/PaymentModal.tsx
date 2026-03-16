@@ -18,6 +18,7 @@ interface PaymentModalProps {
   outstandingBalance: number;
   createdBy?:         string;
   onSubmit: (data: CreatePaymentDto) => Promise<{ success: boolean; message: string }>;
+  currencySymbol: string;
 }
 
 interface FormState {
@@ -53,6 +54,7 @@ export default function PaymentModal({
   outstandingBalance,
   createdBy,
   onSubmit,
+  currencySymbol,
 }: PaymentModalProps) {
   const [form,        setForm]        = useState<FormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,7 +90,7 @@ export default function PaymentModal({
     if (amount > outstandingBalance * 1.01) {
       setFeedback({
         type: "error",
-        msg:  `Amount (£${amount.toFixed(2)}) exceeds outstanding balance (£${outstandingBalance.toFixed(2)})`,
+        msg:  `Amount (${currencySymbol}${amount.toFixed(2)}) exceeds outstanding balance (${currencySymbol}${outstandingBalance.toFixed(2)})`,
       });
       return;
     }
@@ -148,7 +150,7 @@ export default function PaymentModal({
         <div className="bg-orange-50 border-b border-orange-100 px-6 py-3 flex justify-between items-center">
           <span className="text-sm text-gray-600 font-medium">Outstanding Balance</span>
           <span className="text-orange-600 font-bold text-xl">
-            £{outstandingBalance.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+            {currencySymbol}{outstandingBalance.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
           </span>
         </div>
 
@@ -158,7 +160,7 @@ export default function PaymentModal({
           {/* Amount */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Amount (£) <span className="text-red-500">*</span>
+              Amount ({currencySymbol}) <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-2">
               <input

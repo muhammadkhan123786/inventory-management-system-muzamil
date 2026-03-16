@@ -523,12 +523,13 @@ interface Props {
   supplierId:   string;
   supplierName: string;
   createdBy?:   string;
+  currencySymbol: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const fmtGBP = (n: number) =>
-  `£${(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtGBP = (n: number, currencySymbol: string) =>
+  `${currencySymbol}${(n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -580,7 +581,7 @@ function EmptyState({ icon, message, action }: { icon: string; message: string; 
 
 type Tab = "ledger" | "payments";
 
-export default function SupplierLedgerView({ supplierId, supplierName, createdBy }: Props) {
+export default function SupplierLedgerView({ supplierId, supplierName, createdBy, currencySymbol }: Props) {
   const [activeTab,         setActiveTab]         = useState<Tab>("ledger");
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
 
@@ -635,7 +636,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
           label="Total Purchased"
-          value={fmtGBP(summary.totalPurchases)}
+          value={fmtGBP(summary.totalPurchases, currencySymbol)}
           sub={`${summary.entryCount} entries`}
           icon="📦"
           borderColor="border-red-200"
@@ -643,7 +644,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
         />
         <StatCard
           label="Total Returned"
-          value={fmtGBP(summary.totalReturns)}
+          value={fmtGBP(summary.totalReturns, currencySymbol)}
           sub="Completed GRTNs"
           icon="↩️"
           borderColor="border-green-200"
@@ -651,7 +652,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
         />
         <StatCard
           label="Total Paid"
-          value={fmtGBP(summary.totalPayments)}
+          value={fmtGBP(summary.totalPayments, currencySymbol)}
           sub="Payments made"
           icon="💳"
           borderColor="border-blue-200"
@@ -659,7 +660,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
         />
         <StatCard
           label="Outstanding"
-          value={fmtGBP(summary.outstanding)}
+          value={fmtGBP(summary.outstanding, currencySymbol)}
           sub="Amount owed"
           icon={summary.outstanding <= 0 ? "✅" : "⚠️"}
           borderColor={summary.outstanding <= 0 ? "border-green-200" : "border-orange-200"}
@@ -801,13 +802,13 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
                           {entry.notes || "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-red-600">
-                          {entry.direction === "debit" ? fmtGBP(entry.amount) : <span className="text-gray-300">—</span>}
+                          {entry.direction === "debit" ? fmtGBP(entry.amount, currencySymbol) : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-green-600">
-                          {entry.direction === "credit" ? fmtGBP(entry.amount) : <span className="text-gray-300">—</span>}
+                          {entry.direction === "credit" ? fmtGBP(entry.amount, currencySymbol) : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-gray-800">
-                          {fmtGBP(entry.balanceAfter)}
+                          {fmtGBP(entry.balanceAfter, currencySymbol)}
                         </td>
                       </tr>
                     );
@@ -819,13 +820,13 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
                       TOTALS ({filteredEntries.length} entries)
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-red-700 text-sm">
-                      {fmtGBP(summary.totalDebit)}
+                      {fmtGBP(summary.totalDebit, currencySymbol)}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-green-700 text-sm">
-                      {fmtGBP(summary.totalCredit)}
+                      {fmtGBP(summary.totalCredit, currencySymbol)}
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-orange-700 text-sm">
-                      {fmtGBP(summary.outstanding)}
+                      {fmtGBP(summary.outstanding, currencySymbol)}
                     </td>
                   </tr>
                 </tfoot>
@@ -913,7 +914,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
                           {p.notes || "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-bold text-blue-700">
-                          {fmtGBP(p.amount)}
+                          {fmtGBP(p.amount, currencySymbol)}
                         </td>
                       </tr>
                     );
@@ -925,7 +926,7 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
                       TOTAL PAID ({payments.length} payments)
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-blue-700 text-sm">
-                      {fmtGBP(payments.reduce((s, p) => s + p.amount, 0))}
+                      {fmtGBP(payments.reduce((s, p) => s + p.amount, 0), currencySymbol)}
                     </td>
                   </tr>
                 </tfoot>
@@ -944,6 +945,8 @@ export default function SupplierLedgerView({ supplierId, supplierName, createdBy
         outstandingBalance={summary.outstanding}
         createdBy={createdBy}
         onSubmit={handleRecordPayment}
+
+        currencySymbol = { currencySymbol}
       />
     </div>
   );

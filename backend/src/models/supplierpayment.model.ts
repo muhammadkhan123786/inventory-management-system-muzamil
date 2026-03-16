@@ -43,7 +43,7 @@ const SupplierPaymentSchema = new Schema<ISupplierPayment>(
 
     paymentMethod: {
       type:    String,
-      enum:    ["bank_transfer", "cheque", "cash", "credit_note", "other"],
+      enum:    ["bank_transfer", "cheque", "cash", "credit_note", "other", "online"],
       default: "bank_transfer",
     },
     paymentStatus: {

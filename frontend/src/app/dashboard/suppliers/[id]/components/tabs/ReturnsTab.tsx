@@ -17,6 +17,7 @@ import { useGoodsReturn } from "@/hooks/useGoodsReturn";
 interface Props {
   supplierId: string;
   userId: string;
+  currencySymbol: string;
 }
 
 const STATUS_CONFIG: Record<
@@ -50,7 +51,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function ReturnsTab({ supplierId, userId }: Props) {
+export function ReturnsTab({ supplierId, userId, currencySymbol }: Props) {
   const { returns, loading } = useSupplierReturns(supplierId, userId);
   const router = useRouter();
 
@@ -272,8 +273,7 @@ export function ReturnsTab({ supplierId, userId }: Props) {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-bold text-gray-800">
-                          £
-                          {console.log("ret", ret)}
+                          {currencySymbol}
                           {ret.items.map((value: any, index: number) => (
   <span key={index}>{value.totalAmount || "0.00"}</span>
 ))}

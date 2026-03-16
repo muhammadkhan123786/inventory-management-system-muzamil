@@ -50,6 +50,7 @@ interface Props {
   productId:     string;
   productName:   string;
   sku:           string;
+  currencySymbol: string;
 }
 
 const SOURCE_CONFIG: Record<string, { label: string; style: string }> = {
@@ -61,6 +62,7 @@ const SOURCE_CONFIG: Record<string, { label: string; style: string }> = {
 export function PriceHistoryModal({
   open, onOpenChange,
   supplierId, productId, productName, sku,
+  currencySymbol,
 }: Props) {
   const [history, setHistory] = useState<PriceRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -231,7 +233,7 @@ export function PriceHistoryModal({
                                 <div className="flex items-baseline gap-2">
                                   {/* ✅ newPrice */}
                                   <span className="text-4xl font-bold text-gray-900">
-                                    £{current.newPrice.toFixed(2)}
+                                    ${currencySymbol}{current.newPrice.toFixed(2)}
                                   </span>
                                   <span className="text-gray-400 text-sm">{current.currency || "GBP"}</span>
                                 </div>
@@ -239,11 +241,11 @@ export function PriceHistoryModal({
                                 {/* Previous + change */}
                                 {current.previousPrice !== null && (
                                   <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-2">
-                                    <span>Previous: <strong className="text-gray-700">£{current.previousPrice.toFixed(2)}</strong></span>
+                                    <span>Previous: <strong className="text-gray-700">${currencySymbol}{current.previousPrice.toFixed(2)}</strong></span>
                                     {current.change !== null && current.direction !== "same" && (
                                       <span className={`font-bold text-sm ${current.direction === "up" ? "text-red-500" : "text-emerald-600"}`}>
                                         {current.direction === "up" ? "▲ +" : "▼ "}
-                                        £{Math.abs(current.change).toFixed(2)}
+                                        4{currencySymbol}{Math.abs(current.change).toFixed(2)}
                                         {current.changePercent !== null && (
                                           <span className="text-xs ml-1 opacity-80">
                                             ({current.direction === "up" ? "+" : ""}{current.changePercent}%)
@@ -291,8 +293,8 @@ export function PriceHistoryModal({
                               Price Trend
                             </span>
                             <div className="flex gap-4 text-xs text-gray-500">
-                              <span>Low <strong className="text-gray-700">£{minP.toFixed(2)}</strong></span>
-                              <span>High <strong className="text-gray-700">£{maxP.toFixed(2)}</strong></span>
+                              <span>Low <strong className="text-gray-700">${currencySymbol}{minP.toFixed(2)}</strong></span>
+                              <span>High <strong className="text-gray-700">${currencySymbol}{maxP.toFixed(2)}</strong></span>
                             </div>
                           </div>
                           <svg viewBox={`0 0 ${W} ${H + 10}`} className="w-full" style={{ height: 72 }}>
@@ -452,7 +454,7 @@ export function PriceHistoryModal({
                                           </span>
                                         )}
                                         <span className="font-bold text-gray-900 font-mono">
-                                          £{item.newPrice.toFixed(2)}
+                                          ${currencySymbol}{item.newPrice.toFixed(2)}
                                         </span>
                                       </div>
                                     </td>
@@ -461,7 +463,7 @@ export function PriceHistoryModal({
                                     <td className="px-5 py-3.5 text-right">
                                       {item.previousPrice !== null ? (
                                         <span className="text-sm text-gray-500 font-mono">
-                                          £{item.previousPrice.toFixed(2)}
+                                          ${currencySymbol}{item.previousPrice.toFixed(2)}
                                         </span>
                                       ) : (
                                         <span className="text-xs text-gray-300 italic">first entry</span>

@@ -32,6 +32,7 @@ interface Props {
   supplierId: string;
   supplierName: string;
   userId: string;
+  currencySymbol: string;
 }
 
 const DirIcon = ({ dir }: { dir: string }) => {
@@ -40,7 +41,7 @@ const DirIcon = ({ dir }: { dir: string }) => {
   return <Minus className="h-3.5 w-3.5 text-gray-400" />;
 };
 
-export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) {
+export function SupplierPricingTab({ supplierId, supplierName, userId, currencySymbol }: Props) {
   const [rows, setRows] = useState<ProductRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -143,7 +144,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) 
           {[
             { icon: Package, label: "Total Products", value: String(rows.length), grad: "from-blue-50 to-indigo-50 border-blue-200 text-blue-800" },
             { icon: DollarSign, label: "Avg Margin", value: `${avgMargin}%`, grad: "from-emerald-50 to-teal-50 border-emerald-200 text-emerald-800" },
-            { icon: TrendingUp, label: "Stock Value", value: `£${totalValue.toFixed(0)}`, grad: "from-violet-50 to-purple-50 border-violet-200 text-violet-800" },
+            { icon: TrendingUp, label: "Stock Value", value: `${currencySymbol}${totalValue.toFixed(0)}`, grad: "from-violet-50 to-purple-50 border-violet-200 text-violet-800" },
             { icon: AlertTriangle, label: "Low Stock", value: String(lowStockCount), grad: "from-amber-50 to-orange-50 border-amber-200 text-amber-800" },
           ].map(({ icon: Icon, label, value, grad }) => (
             <div key={label} className={`rounded-2xl p-4 border bg-gradient-to-br ${grad}`}>
@@ -233,7 +234,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) 
                   {/* Cost Price - col-span-2 */}
                   <div className="col-span-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-gray-900">£{row.costPrice.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">${currencySymbol}{row.costPrice.toFixed(2)}</span>
                       {row.lastChange && <DirIcon dir={row.lastChange.direction} />}
                     </div>
                     {row.lastChange?.changedAt && (
@@ -249,7 +250,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) 
 
                   {/* Selling Price - col-span-1 */}
                   <div className="col-span-1">
-                    <span className="text-sm text-gray-600">£{row.sellingPrice.toFixed(2)}</span>
+                    <span className="text-sm text-gray-600">${currencySymbol}{row.sellingPrice.toFixed(2)}</span>
                   </div>
 
                   {/* Margin - col-span-1 */}
@@ -307,6 +308,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) 
           currentPrice={updateModal.row.costPrice}
           userId={userId}
           onSuccess={fetchRows}
+          currencySymbol = {currencySymbol}
         />
       )}
 
@@ -318,6 +320,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId }: Props) 
           productId={historyModal.row.productId}
           productName={historyModal.row.productName}
           sku={historyModal.row.sku}
+          currencySymbol = {currencySymbol}
         />
       )}
     </>
