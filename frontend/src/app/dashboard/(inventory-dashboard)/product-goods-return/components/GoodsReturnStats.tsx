@@ -6,6 +6,7 @@ import { Badge } from '@/components/form/Badge';
 import { ReturnStats } from '../types/goodsReturn';
 import { PackageX, AlertTriangle, Truck, CheckCircle2, TrendingDown, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from "@/stores/currency.store";
 
 interface GoodsReturnStatsProps {
   stats: ReturnStats;
@@ -20,7 +21,11 @@ const mapStatsToDisplay = (stats: any) => ({
   totalReturnValue: stats.totalValue || 0
 });
 
-const statCards = [
+
+export const GoodsReturnStats: React.FC<GoodsReturnStatsProps> = ({ stats }) => {
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+ 
+  const statCards = [
   {
     key: 'totalReturns' as const,
     label: 'Total Returns',
@@ -55,13 +60,10 @@ const statCards = [
     gradient: 'from-purple-500 to-pink-500',
     icon: TrendingDown,
     badgeText: 'Value',
-    format: (value: number) => `£${value.toFixed(2)}`
+    format: (value: number) => `${currencySymbol}${value.toFixed(2)}`
   }
 ];
 
-export const GoodsReturnStats: React.FC<GoodsReturnStatsProps> = ({ stats }) => {
-  console.log("stats", stats);
-  
   // Map the stats to the expected format
   const displayStats = mapStatsToDisplay(stats);
 
