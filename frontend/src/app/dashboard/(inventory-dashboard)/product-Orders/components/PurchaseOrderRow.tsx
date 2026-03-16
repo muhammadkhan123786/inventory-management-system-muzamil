@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PO STATUS — 3 manual + 1 auto
@@ -187,6 +189,8 @@ interface PurchaseOrderRowProps {
 export const PurchaseOrderRow: React.FC<PurchaseOrderRowProps> = ({
   order, index, onView, onEdit, onDelete, onStatusChange,
 }) => {
+        const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+
   const canCancel  = CAN_CANCEL.includes(order.status);
   const isTerminal = IS_TERMINAL.includes(order.status);
  console.log("order.expectedDelivery", order.expectedDelivery);
@@ -248,7 +252,7 @@ export const PurchaseOrderRow: React.FC<PurchaseOrderRowProps> = ({
       {/* Total */}
       <td className="p-4 whitespace-nowrap">
         <span className="text-base font-bold text-emerald-600">
-          £{Number(order.total).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
+          {currencySymbol}{Number(order.total).toLocaleString('en-GB', { minimumFractionDigits: 2 })}
         </span>
       </td>
 

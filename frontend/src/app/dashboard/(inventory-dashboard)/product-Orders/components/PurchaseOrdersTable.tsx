@@ -16,6 +16,7 @@ interface PurchaseOrdersTableProps {
 export const PurchaseOrdersTable: React.FC<PurchaseOrdersTableProps> = ({
   orders, onView, onEdit, onDelete, onStatusChange
 }) => {
+  
   if (!orders?.length) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
