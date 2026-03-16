@@ -1,3 +1,4 @@
+import  Image  from "next/image";
 import React from "react";
 
 interface DocumentPreviewModalProps {
@@ -39,7 +40,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         <div className="flex-1 overflow-auto bg-slate-50 p-6">
           {previewType === "image" ? (
             <div className="flex items-center justify-center h-full">
-              <img
+              <Image
+              width={50}
+              height={50}
                 src={previewUrl}
                 alt="Document Preview"
                 className="max-w-full max-h-full object-contain rounded-lg"

@@ -19,6 +19,7 @@ import { ProductStatistics } from "../Product/ProductStats";
 import { enrichProductCategories, transformProduct } from "@/lib/productTransformer";
 import { ProductQuickEditDialog } from "../Product/EditProductDialog";
 import { useProductForm } from "../Product/hooks/useProductForm";
+import { useCurrencyStore } from "@/stores/currency.store";
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -59,6 +60,7 @@ export default function ProductListingPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 const [proCategories, setProCategories] = useState<any[]>([]);
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   // ── Categories ──────────────────────────────────────────────────────────────
   const { categories, loading: categoriesLoading, error: categoriesError, refetch: refetchCategories } =
@@ -223,6 +225,7 @@ const [proCategories, setProCategories] = useState<any[]>([]);
               onViewProduct={handleViewProduct}
               onEditProduct={handleEditProduct}
               onResetFilters={resetFilters}
+              currencySymbol = { currencySymbol }
             />
           ) : (
             <ProductTableView
@@ -231,6 +234,7 @@ const [proCategories, setProCategories] = useState<any[]>([]);
               onEdit={handleEditProduct}
               onDelete={(p) => handleConfirmDelete(p.id, p.name)}
               getStockBadge={getStockBadge}
+              currencySymbol = { currencySymbol}
             />
           )}
         </div>

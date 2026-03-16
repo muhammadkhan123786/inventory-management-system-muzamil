@@ -12,6 +12,7 @@ interface ProductTableViewProps {
   onEdit: (product: any) => void;
   onDelete: (product: ProductListItem) => void;
   getStockBadge: (status: string) => { class: string; icon: any };
+  currencySymbol: string;
 }
 
 export const ProductTableView = ({
@@ -20,6 +21,7 @@ export const ProductTableView = ({
   onEdit,
   onDelete,
   getStockBadge,
+  currencySymbol
 }: ProductTableViewProps) => {
   const getCategoryBadgeColor = (level: number): string => {
     const colors = [
@@ -146,10 +148,10 @@ export const ProductTableView = ({
                     <td className="px-6 py-4">
                       <div>
                         <p className="font-bold text-gray-900">
-                          £{product.price.toFixed(2)}
+                          {currencySymbol}{product.price.toFixed(2)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Cost: £{product?.costPrice?.toFixed(2)}
+                          Cost: {currencySymbol}{product?.costPrice?.toFixed(2)}
                         </p>
                       </div>
                     </td>
