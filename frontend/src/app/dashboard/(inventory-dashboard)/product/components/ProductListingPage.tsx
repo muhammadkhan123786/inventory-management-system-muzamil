@@ -18,6 +18,7 @@ import { CategoryFilters } from "../Product/CategoryFilters";
 import { ProductStatistics } from "../Product/ProductStats";
 import { enrichProductCategories, transformProduct } from "@/lib/productTransformer";
 import { ProductQuickEditDialog } from "../Product/EditProductDialog";
+import { useProductForm } from "../Product/hooks/useProductForm";
 
 // ── Skeleton card ─────────────────────────────────────────────────────────────
 const SkeletonCard = () => (
@@ -57,6 +58,7 @@ export default function ProductListingPage() {
   const [selectedProduct, setSelectedProduct]   = useState<ProductListItem | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+const [proCategories, setProCategories] = useState<any[]>([]);
 
   // ── Categories ──────────────────────────────────────────────────────────────
   const { categories, loading: categoriesLoading, error: categoriesError, refetch: refetchCategories } =
@@ -79,6 +81,7 @@ export default function ProductListingPage() {
     handleSearchChange, handleCategoryChange, handleStatusChange,
     handleStockStatusChange, handleFeaturedToggle, handlePageChange, resetFilters,
   } = useProducts({ autoFetch: true, initialLimit: 12, categories });
+  
 
   const categoryMap = useMemo(() => {
     const map: Record<string, any> = {};
@@ -86,6 +89,11 @@ export default function ProductListingPage() {
     return map;
   }, [categories]);
 
+    const handleCategoriesChange = (newCategories: any[]) => {
+    setProCategories(newCategories);
+    // You can also save to context/store if needed
+    console.log("Categories updated:", newCategories);
+  };
   const getStockBadge = (status: string) => {
     const v: Record<string, { class: string; icon: any }> = {
       "in-stock":     { class: "bg-gradient-to-r from-emerald-500 to-green-500 text-white", icon: CheckCircle },
@@ -269,12 +277,17 @@ export default function ProductListingPage() {
             product={selectedProduct}
             getStockBadge={getStockBadge}
             onDelete={() => handleConfirmDelete(selectedProduct.id, selectedProduct.name)}
+            categories={proCategories}  
+            // attributeOptions={attributeOptions}
           />
+
           <ProductQuickEditDialog
             open={isEditDialogOpen}
             onOpenChange={setIsEditDialogOpen}
             product={selectedProduct}
             onSave={handleSaveEdit}
+            externalCategories={proCategories}
+            onCategoriesChange={handleCategoriesChange}
           />
         </>
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,9 @@ interface ProductQuickEditDialogProps {
   product: any;
   onSave: (data: any) => Promise<void>;
   onFullEdit?: () => void;
-  categories?: any[]; // optional — now fetched internally by hook
+  categories?: any[]; // Optional if parent wants to provide
+  onCategoriesChange?: (categories: any[]) => void; // Callback to parent
+  externalCategories?: any[]; // If parent wants to sync
 }
 
 export function ProductQuickEditDialog({
@@ -34,6 +36,8 @@ export function ProductQuickEditDialog({
   product,
   onSave,
   onFullEdit,
+  onCategoriesChange,
+  externalCategories,
 }: ProductQuickEditDialogProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,9 +54,25 @@ export function ProductQuickEditDialog({
     productStatuses,
     conditions,
     warehouseStatuses,
-    categories,        // ✅ from hook now
-    attributeOptions,  // ✅ from hook now
+    categories,        // from hook
+    attributeOptions,
   } = useProductForm(product, onSave, onOpenChange);
+
+  // Notify parent when categories change
+  useEffect(() => {
+    if (categories && onCategoriesChange) {
+      onCategoriesChange(categories);
+    }
+  }, [categories, onCategoriesChange]);
+
+  // Sync with external categories if provided
+  useEffect(() => {
+    if (externalCategories && JSON.stringify(categories) !== JSON.stringify(externalCategories)) {
+      // Update local categories if needed
+      console.log("Syncing with external categories:", externalCategories);
+      // You might want to update the form here if needed
+    }
+  }, [externalCategories, categories]);
 
   const fileToBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -172,8 +192,7 @@ export function ProductQuickEditDialog({
             </TabsContent>
 
             <TabsContent value="variants" className="mt-0">
-              {/* ✅ categories & attributeOptions now from hook — never empty */}
-              <VariantsTab
+             <VariantsTab
                 formData={formData}
                 categories={categories}
                 attributeOptions={attributeOptions}
@@ -191,6 +210,12 @@ export function ProductQuickEditDialog({
               {formData.supplierName && (
                 <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
                   Supplier: {formData.supplierName}
+                </span>
+              )}
+              {/* Show category count for debugging */}
+              {categories && (
+                <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                  Categories: {categories.length}
                 </span>
               )}
             </p>
