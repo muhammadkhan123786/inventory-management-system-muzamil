@@ -33,6 +33,8 @@ import {
   SelectTrigger, SelectValue,
 } from "@/components/form/Select";
 import InfoBoxSection from '../sections/InfoBoxSection';
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 import { ProductVariant, MarketplacePricing } from '../../hooks/useProductForm';
 import { toast } from 'sonner';
@@ -229,6 +231,7 @@ export function AttributesAndPricingStep({
   const inventoryRef = useRef<HTMLDivElement>(null);
   const warrantyRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   const scrollToSection = useCallback((section: ValidationIssue['section']) => {
     const map = {
@@ -257,7 +260,6 @@ export function AttributesAndPricingStep({
   });
 
   const hasDynamicFields = attributes && attributes.length > 0;
-  const currencySymbol = '£';
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleAttributeChange = (fieldId: string, value: any) =>
@@ -621,9 +623,9 @@ export function AttributesAndPricingStep({
                                     {pricing.vatExempt && <Badge className="bg-green-500 text-white text-xs">VAT Exempt</Badge>}
                                   </div>
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    <div><p className="text-xs text-gray-600">Cost Price</p><p className="font-semibold text-gray-900">£{cost.toFixed(2)}</p></div>
-                                    <div><p className="text-xs text-gray-600">Selling Price</p><p className="font-bold text-green-700">£{selling.toFixed(2)}</p></div>
-                                    <div><p className="text-xs text-gray-600">Profit</p><p className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>£{profit.toFixed(2)}</p></div>
+                                    <div><p className="text-xs text-gray-600">Cost Price</p><p className="font-semibold text-gray-900">{currencySymbol}{cost.toFixed(2)}</p></div>
+                                    <div><p className="text-xs text-gray-600">Selling Price</p><p className="font-bold text-green-700">{currencySymbol}{selling.toFixed(2)}</p></div>
+                                    <div><p className="text-xs text-gray-600">Profit</p><p className={`font-semibold ${profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>{currencySymbol}{profit.toFixed(2)}</p></div>
                                     <div><p className="text-xs text-gray-600">Margin</p><p className={`font-bold ${margin >= 0 ? 'text-teal-700' : 'text-red-700'}`}>{margin.toFixed(1)}%</p></div>
                                   </div>
                                   {pricing.discountPercentage && pricing.discountPercentage > 0 && (

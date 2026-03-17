@@ -14,6 +14,8 @@ import { getStatusColor, getStatusIcon } from "../utils/purchaseOrderUtils";
 import { Building2, Truck, Calendar, Package, Download } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 interface ViewOrderDialogProps {
   open: boolean;
@@ -28,21 +30,24 @@ export const ViewOrderDialog: React.FC<ViewOrderDialogProps> = ({
   order,
   onExport,
 }) => {
-  if (!order) return null;
-
+const [exportFilters, setExportFilters] = useState({
+    status: "",
+    startDate: "",
+    endDate: "",
+    supplier: "",
+  });
+    
   const isSupplierObject = (
     supplier: string | ISupplier,
   ): supplier is ISupplier => {
     return typeof supplier === "object" && supplier !== null;
   };
 
+    const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+    if (!order) return null;
+
   const StatusIcon = getStatusIcon(order.status);
-  const [exportFilters, setExportFilters] = useState({
-    status: "",
-    startDate: "",
-    endDate: "",
-    supplier: "",
-  });
+  
 
   const handleExportSubmit = async () => {
     try {
@@ -196,10 +201,10 @@ export const ViewOrderDialog: React.FC<ViewOrderDialogProps> = ({
                         {item.quantity}
                       </td>
                       <td className="p-3 text-sm text-right">
-                        £{item.unitPrice.toFixed(2)}
+                        {currencySymbol}{item.unitPrice.toFixed(2)}
                       </td>
                       <td className="p-3 text-sm text-right font-semibold">
-                        £{(item.unitPrice * item.quantity).toFixed(2)}
+                        {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -211,7 +216,7 @@ export const ViewOrderDialog: React.FC<ViewOrderDialogProps> = ({
                       Subtotal:
                     </td>
                     <td className="p-3 text-sm font-semibold text-right">
-                      £{order.subtotal.toFixed(2)}
+                      {currencySymbol}{order.subtotal.toFixed(2)}
                     </td>
                   </tr>
                   <tr>
@@ -220,7 +225,7 @@ export const ViewOrderDialog: React.FC<ViewOrderDialogProps> = ({
                       VAT (20%):
                     </td>
                     <td className="p-3 text-sm font-semibold text-right">
-                      £{order.tax.toFixed(2)}
+                      {currencySymbol}{order.tax.toFixed(2)}
                     </td>
                   </tr>
                   <tr className="border-t-2 border-gray-200">
@@ -229,7 +234,7 @@ export const ViewOrderDialog: React.FC<ViewOrderDialogProps> = ({
                       Total:
                     </td>
                     <td className="p-3 text-lg font-bold text-emerald-600 text-right">
-                      £{order.total.toFixed(2)}
+                      {currencySymbol}{order.total.toFixed(2)}
                     </td>
                   </tr>
                 </tfoot>

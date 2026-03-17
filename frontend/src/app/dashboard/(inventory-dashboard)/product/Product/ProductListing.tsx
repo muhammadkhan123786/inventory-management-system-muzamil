@@ -1,20 +1,17 @@
 // ProductListing.tsx - UPDATED VERSION
 'use client'
-import { useMemo } from 'react';
-import { ProductStatistics } from './ProductStats';
-import { CategoryFilters } from './CategoryFilters';
+
 import { ProductCard } from './ProductCard';
 import { CheckCircle, AlertCircle, Package } from "lucide-react"
 import { Product,  ProductListItem } from '../types/product';
 import { Button } from "@/components/form/CustomButton"
-import { DatabaseCategory } from '../../../../../hooks/useCategory';
 
 interface ProductListingProps {
   products: ProductListItem[];  
   hasActiveFilters: boolean;
   onViewProduct: (product: Product) => void;
   onEditProduct: (product: Product) => void;
- 
+ currencySymbol: string;
   onResetFilters: () => void;
 }
 
@@ -24,12 +21,12 @@ export const ProductListing = ({
   onViewProduct, 
   onEditProduct,
   onResetFilters,
+  currencySymbol,
 
 }: ProductListingProps) => {
 
 
 
-  console.log("products",products)
 
   const getStockBadge = (status: string) => {
     const variants: Record<string, { class: string; icon: any }> = {
@@ -64,6 +61,7 @@ export const ProductListing = ({
               onView={onViewProduct}
               onEdit={onEditProduct}
               getStockBadge={getStockBadge}
+              currencySymbol = { currencySymbol }
             />
           ))}
         </div>

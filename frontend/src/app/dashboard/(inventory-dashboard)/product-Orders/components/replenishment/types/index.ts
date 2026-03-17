@@ -24,4 +24,5 @@ export interface ReplenishmentProposalsModalProps {
     products: ReorderProduct[];
     onCreateOrders: (selected: ReorderProduct[]) => Promise<void>;
     isCreating?: boolean;
+    currencySymbol: string;
 }

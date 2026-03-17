@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronRight, Menu, Zap, LogOut, X } from "lucide-react";
 import { getRoleBaseNavBarLinks } from "@/lib/UtilsFns";
 import { Button } from "@/components/form/CustomButton";
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 interface NavItem {
   _id: string;
@@ -34,6 +36,11 @@ export default function Layout({ children, onLogout }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
+  const fetchCurrency = useCurrencyStore((s: any) => s.fetchCurrency);
+
+  useEffect(() => {
+    fetchCurrency();
+  }, []);
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = () => {

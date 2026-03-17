@@ -12,6 +12,7 @@ interface ProductRowProps {
     onToggle: (id: string) => void;
     onQuantityChange: (productId: string, newValue: number) => void;
     index: number;
+    currencySymbol: string;
 }
 
 export const ProductRow = ({ 
@@ -20,7 +21,8 @@ export const ProductRow = ({
     currentQty, 
     onToggle, 
     onQuantityChange,
-    index 
+    index,
+    currencySymbol,
 }: ProductRowProps) => {
     const sev = SEVERITY[product.severity];
     const SevIcon = sev.icon;
@@ -81,11 +83,11 @@ export const ProductRow = ({
                 />
             </td>
             <td className="px-3 py-4 text-sm text-gray-600">
-                £{product.costPrice.toFixed(2)}
+                {currencySymbol}{product.costPrice.toFixed(2)}
             </td>
             <td className="px-3 py-4">
                 <span className="font-medium text-gray-900">
-                    £{lineTotal.toFixed(2)}
+                    {currencySymbol}{lineTotal.toFixed(2)}
                 </span>
             </td>
             <td className="px-3 py-4">

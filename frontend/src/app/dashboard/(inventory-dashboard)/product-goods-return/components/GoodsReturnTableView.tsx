@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 interface GoodsReturnTableViewProps {
   returns:          GoodsReturnNote[];
@@ -64,6 +66,7 @@ const STATUS_LABELS: Record<string, string> = {
 export const GoodsReturnTableView: React.FC<GoodsReturnTableViewProps> = ({
   returns, onView, onDownload, onStatusUpdate, isUpdatingStatus,
 }) => {
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   if (returns.length === 0) {
     return (
@@ -76,7 +79,6 @@ export const GoodsReturnTableView: React.FC<GoodsReturnTableViewProps> = ({
       </Card>
     );
   }
-  console.log("This is the InCorrect Project log", returns);
 
   return (
     <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}>
@@ -197,7 +199,7 @@ export const GoodsReturnTableView: React.FC<GoodsReturnTableViewProps> = ({
                     {/* Total Value */}
                     <td className="px-5 py-4">
                       <span className="text-base font-bold text-orange-600">
-                        £{totalAmount.toFixed(2)}
+                        {currencySymbol}{totalAmount.toFixed(2)}
                       </span>
                     </td>
 

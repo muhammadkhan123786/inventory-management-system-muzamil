@@ -17,6 +17,7 @@ interface ProductCardProps {
   onView: (product: any) => void;
   onEdit: (product: any) => void;
   getStockBadge: (status: string) => { class: string; icon: any };
+  currencySymbol: string;
 }
 
 // Badge colors for different category levels
@@ -40,6 +41,7 @@ export const ProductCard = ({
   onView,
   onEdit,
   getStockBadge,
+  currencySymbol,
 }: ProductCardProps) => {
   const stockInfo = getStockBadge(product.stockStatus);
   const StockIcon = stockInfo.icon;
@@ -47,8 +49,7 @@ const fullUrl = getImageUrl();
 console.log("im", product.imageUrl);
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || '';
   const staticBaseUrl = baseUrl.replace('/api', '');
-  console.log("staticBaseUrl", staticBaseUrl)
-console.log("fullUrl", `${staticBaseUrl}/uploads/${product.imageUrl}`)
+
   return (
     <motion.div
       key={product.id}
@@ -129,10 +130,10 @@ console.log("fullUrl", `${staticBaseUrl}/uploads/${product.imageUrl}`)
           <div className="flex items-center justify-between">
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                £{product.price.toFixed(2)}
+                {currencySymbol}{product.price.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500">
-                Cost: £{product?.costPrice?.toFixed(2)}
+                Cost: {currencySymbol}{product?.costPrice?.toFixed(2)}
               </p>
             </div>
             <div className="text-right">

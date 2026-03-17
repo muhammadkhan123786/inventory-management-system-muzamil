@@ -19,6 +19,8 @@ import { Card, CardContent } from "@/components/form/Card";
 import { GRNForReturn, ReturningItem } from "../types/goodsReturn";
 import { PackageX, Loader2, Calendar, Info, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 interface CreateReturnDialogProps {
   open: boolean;
@@ -61,6 +63,7 @@ export const CreateReturnDialog: React.FC<CreateReturnDialogProps> = ({
   isLoadingItems = false, returnDate: externalReturnDate, onReturnDateChange: externalOnReturnDateChange,
 }) => {
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   // ─── React Hook Form Setup ─────────────────────────────────────────────
   const {
@@ -551,7 +554,7 @@ export const CreateReturnDialog: React.FC<CreateReturnDialogProps> = ({
                               </div>
                             </div>
                             <Badge className="bg-indigo-100 text-indigo-700">
-                              £{item.unitPrice?.toFixed(2) || "0.00"} / unit
+                              {currencySymbol}{item.unitPrice?.toFixed(2) || "0.00"} / unit
                             </Badge>
                           </div>
 
@@ -643,7 +646,7 @@ export const CreateReturnDialog: React.FC<CreateReturnDialogProps> = ({
                               className="bg-orange-50 border border-orange-200 rounded p-2"
                             >
                               <p className="text-sm font-medium text-orange-900">
-                                Return Value: £{(item.returnQuantity * item.unitPrice).toFixed(2)}
+                                Return Value: {currencySymbol}{(item.returnQuantity * item.unitPrice).toFixed(2)}
                               </p>
                             </motion.div>
                           )}
@@ -687,7 +690,7 @@ export const CreateReturnDialog: React.FC<CreateReturnDialogProps> = ({
                         </p>
                       </div>
                       <p className="text-3xl font-bold text-orange-900">
-                        £{totalReturnValue.toFixed(2)}
+                        {currencySymbol}{totalReturnValue.toFixed(2)}
                       </p>
                     </div>
                   </CardContent>

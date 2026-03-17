@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAll, deleteItem, updateItem, createItem, marketplaceAPIHelper } from "@/helper/apiHelper";
 import { toast } from "react-hot-toast"; // Naya Import
 
-
+import { useCurrencyStore } from "@/stores/currency.store";
 const getUserId = () => {
   if (typeof window === "undefined") return "";
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -47,29 +47,60 @@ export const useFormActions = <T extends { _id: string }>(
   });
 
   // 3. STATUS UPDATE / EDIT MUTATION (Update)
+  // const updateMutation = useMutation({
+  //   mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+  //     updateItem(endpoint, id, payload),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: [queryKey] });
+  //     toast.success(`${moduleName} updated successfully!`);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err.response?.data?.message || `Failed to update ${moduleName}`);
+  //   }
+  // });
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
-      updateItem(endpoint, id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [queryKey] });
-      toast.success(`${moduleName} updated successfully!`);
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || `Failed to update ${moduleName}`);
+  mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+    updateItem(endpoint, id, payload),
+
+  onSuccess: async () => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+
+    // Only refresh currency store if endpoint is currencies
+    if (endpoint === "/currencies") {
+      const { fetchCurrency } = useCurrencyStore.getState();
+      await fetchCurrency();
     }
-  });
+
+    toast.success(`${moduleName} updated successfully!`);
+  },
+});
 
   // 4. CREATE MUTATION (Create)
+  // const createMutation = useMutation({
+  //   mutationFn: (payload: any) => createItem(endpoint, payload),
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: [queryKey] });
+  //     toast.success(`${moduleName} created successfully!`);
+  //   },
+  //   onError: (err: any) => {
+  //     toast.error(err.response?.data?.message || `Failed to create ${moduleName}`);
+  //   }
+  // });
+
   const createMutation = useMutation({
-    mutationFn: (payload: any) => createItem(endpoint, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [queryKey] });
-      toast.success(`${moduleName} created successfully!`);
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.message || `Failed to create ${moduleName}`);
+  mutationFn: (payload: any) => createItem(endpoint, payload),
+
+  onSuccess: async () => {
+    queryClient.invalidateQueries({ queryKey: [queryKey] });
+
+    if (endpoint === "/currencies") {
+      const { fetchCurrency } = useCurrencyStore.getState();
+      await fetchCurrency();
     }
-  });
+
+    toast.success(`${moduleName} created successfully!`);
+  },
+});
 
 
   // 5. Test Connection Mutation

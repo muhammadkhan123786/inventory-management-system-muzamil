@@ -7,6 +7,7 @@ import { GoodsReceivedNote, PurchaseOrder, PopulatedProduct } from '../types/goo
 import { User, Download, Package } from 'lucide-react';
 import * as React from 'react';
 
+
 interface ViewGRNDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;

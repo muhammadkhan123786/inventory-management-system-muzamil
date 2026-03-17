@@ -9,6 +9,7 @@ import { getStatusColor, getStatusIcon } from '../utils/goodsReturnUtils';
 import { FileText, Truck, Calendar, User, RotateCcw, Eye, Download } from 'lucide-react';
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { useCurrencyStore } from "@/stores/currency.store";
 
 interface GoodsReturnCardProps {
   grtn: any;
@@ -23,6 +24,8 @@ export const GoodsReturnCard: React.FC<GoodsReturnCardProps> = ({
   onView,
   onDownload
 }) => {
+  const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+
   const StatusIcon = getStatusIcon(grtn.status);
 const totalAmount = grtn.totalAmount || 
     grtn.items.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0);
@@ -69,7 +72,7 @@ const totalAmount = grtn.totalAmount ||
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-[#ea580c]">£{totalAmount}</p>
+              <p className="text-2xl font-bold text-[#ea580c]">{currencySymbol}{totalAmount}</p>
               <p className="text-xs text-gray-500">Return Value</p>
             </div>
           </div>

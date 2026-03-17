@@ -26,6 +26,8 @@ import { ReplenishmentProposalsModal } from "./ReplenishmentProposalsModal";
 import { ReorderProduct } from "../components/replenishment/types"
 import React from "react";
 import { useReorderSuggestions } from '@/hooks/useReorderSuggestions';
+import { useCurrencyStore } from "@/stores/currency.store";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,14 +89,31 @@ interface PurchaseOrderFormProps {
 
 // ─── Local helpers ─────────────────────────────────────────────────
 
-const productConfig: ComboboxItemConfig<ProductFull> = {
-  getKey:           p => p._id,
-  getLabel:         p => p.productName,
-  getSubLabel:      p => p.sku,
-  getRightSubLabel: p => `Stock: ${p.ui_totalStock}`,
-  getRightLabel:    p => `£${p.ui_price}`,
-  getSearchFields:  p => [p.productName, p.sku],
-};
+// const productConfig: ComboboxItemConfig<ProductFull> = {
+//   getKey:           p => p._id,
+//   getLabel:         p => p.productName,
+//   getSubLabel:      p => p.sku,
+//   getRightSubLabel: p => `Stock: ${p.ui_totalStock}`,
+//   getRightLabel:    p => `${currencySymbol}${p.ui_price}`,
+//   getSearchFields:  p => [p.productName, p.sku],
+// };
+
+const getProductConfig = (currencySymbol: string): ComboboxItemConfig<ProductFull> => ({
+  getKey: p => p._id,
+  getLabel: p => p.productName,
+  getSubLabel: p => p.sku,
+ getRightSubLabel: p => {
+    const totalStock = p.attributes?.reduce(
+      (sum, a) => sum + (a.stock?.stockQuantity || 0), 0
+    ) ?? 0;
+    
+    return `Stock: ${totalStock}`;
+  },  getRightLabel: p => {
+    const price = p.attributes?.[0]?.pricing?.[0]?.costPrice ?? 0;
+    return `${currencySymbol}${price}`;
+  },
+  getSearchFields: p => [p.productName, p.sku],
+}); 
 
 function getStockHealth(stock: ProductStock) {
   const { stockQuantity: qty = 0, reorderPoint = 0, minStockLevel = 0, safetyStock = 0 } = stock;
@@ -123,8 +142,9 @@ function StockChip({ stock }: { stock: ProductStock }) {
 const PricingSelector: React.FC<{
   pricingOptions:    ProductPricing[];
   selectedPricingId: string;
+  currencySymbol: string;
   onSelect:          (p: ProductPricing) => void;
-}> = ({ pricingOptions, selectedPricingId, onSelect }) => {
+}> = ({ pricingOptions, selectedPricingId, onSelect, currencySymbol }) => {
   if (pricingOptions.length <= 1) return null;
   return (
     <div className="col-span-5">
@@ -140,7 +160,7 @@ const PricingSelector: React.FC<{
                 : "bg-white border-gray-200 text-gray-600 hover:border-indigo-300"
             }`}>
             {p.marketplaceName}
-            <span className="ml-1.5 font-bold">£{p.sellingPrice}</span>
+            <span className="ml-1.5 font-bold">{currencySymbol}{p.costPrice}</span>
           </button>
         ))}
       </div>
@@ -174,6 +194,12 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     supplier: false,
     expectedDelivery: false
   });
+
+const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
+const productConfig = useMemo(
+  () => getProductConfig(currencySymbol),
+  [currencySymbol]
+);
 
   // ─── React Hook Form Setup ─────────────────────────────────────────────
   const {
@@ -334,7 +360,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       productName: product.productName,
       sku: product.attributes[0]?.sku ?? product.sku,
       quantity: newItem.quantity || "1",
-      unitPrice: firstPricing ? String(firstPricing.sellingPrice) : String(product.ui_price),
+      unitPrice: firstPricing ? String(firstPricing.costPrice) :"0",
     });
 
     // Reorder mode: auto-fill supplier from product's linked supplier
@@ -376,9 +402,10 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     setSelectedPricingId("");
   };
 
+
   const handlePricingSelect = (p: ProductPricing) => {
     setSelectedPricingId(p._id);
-    onNewItemChange({ ...newItem, unitPrice: String(p.sellingPrice) });
+    onNewItemChange({ ...newItem, unitPrice: String(p.costPrice) });
   };
 
   const handleSupplierChange = (id: string) => {
@@ -444,7 +471,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
     const sub = orderItems.reduce(
       (s, i) => s + (i.unitPrice || 0) * (Number(i.quantity) || 0), 0
     );
-    return { subtotal: sub, tax: sub * 0.2, total: sub * 1.2 };
+    return {
+    subtotal: sub.toFixed(2),
+    tax:      (sub * 0.2).toFixed(2),
+    total:    (sub * 1.2).toFixed(2),
+  };
   }, [orderItems]);
 
   const currentSupplierName = useMemo(() => {
@@ -914,6 +945,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                     pricingOptions={availablePricing}
                     selectedPricingId={selectedPricingId}
                     onSelect={handlePricingSelect}
+                    currencySymbol = { currencySymbol }
                   />
                 </div>
 
@@ -948,12 +980,13 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                     </thead>
                     <tbody>
                       {orderItems.map((item, idx) => (
+                        
                         <tr key={idx} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="p-3 text-sm">{item.productName}</td>
                           <td className="p-3 text-sm font-mono text-gray-600">{item.sku}</td>
                           <td className="p-3 text-sm text-center">{item.quantity}</td>
-                          <td className="p-3 text-sm text-right">£{item.unitPrice}</td>
-                          <td className="p-3 text-sm text-right font-semibold">£{item.totalPrice}</td>
+                          <td className="p-3 text-sm text-right">{currencySymbol}{item.unitPrice}</td>
+                          <td className="p-3 text-sm text-right font-semibold">{currencySymbol}{item.totalPrice}</td>
                           <td className="p-3 text-center">
                             <Button size="sm" variant="ghost" type="button"
                               onClick={() => onRemoveItem(idx)} disabled={isSaving}
@@ -985,15 +1018,15 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-lg border-2 border-emerald-100 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-semibold">£{totals.subtotal}</span>
+                    <span className="font-semibold">{currencySymbol}{totals.subtotal}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">VAT (20%):</span>
-                    <span className="font-semibold">£{totals.tax}</span>
+                    <span className="font-semibold">{currencySymbol}{totals.tax}</span>
                   </div>
                   <div className="flex justify-between text-lg border-t-2 border-emerald-200 pt-2">
                     <span className="font-bold text-gray-900">Total:</span>
-                    <span className="font-bold text-emerald-600">£{totals.total}</span>
+                    <span className="font-bold text-emerald-600">{currencySymbol}{totals.total}</span>
                   </div>
                 </div>
               )}
@@ -1031,6 +1064,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
         products={reorderProducts}
         onCreateOrders={handleCreateBulkOrders}
         isCreating={isCreatingBulk}
+        currencySymbol = { currencySymbol}
         //  onOpenChange={handleProposalsClose} 
       />
     </>

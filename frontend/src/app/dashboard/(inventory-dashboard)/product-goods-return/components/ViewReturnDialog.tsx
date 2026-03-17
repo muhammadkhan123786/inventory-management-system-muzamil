@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useCurrencyStore } from "@/stores/currency.store";
 
 interface ViewReturnDialogProps {
   open: boolean;
@@ -42,11 +43,16 @@ export const ViewReturnDialog: React.FC<ViewReturnDialogProps> = ({
   grtn,
   onDownload,
 }) => {
-  if (!grtn) return null;
+  
+  const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
   const totalReturnAmount = React.useMemo(() => {
+    if (!grtn) return 0;
     return grtn.items.reduce((sum: any, item: any) => sum + item.totalAmount, 0);
-  }, [grtn.items]);
+  }, [grtn]);
+
+  if (!grtn) return null;
+
   const StatusIcon = getStatusIcon(grtn.status);
 
   return (
@@ -173,10 +179,10 @@ export const ViewReturnDialog: React.FC<ViewReturnDialogProps> = ({
 
                         <div className="text-right">
                           <p className="text-lg font-bold text-[#ea580c]">
-                            £{returnItem.totalAmount}
+                            {currencySymbol}{returnItem.totalAmount}
                           </p>
                           <p className="text-xs text-gray-500">
-                            £{poItem.unitPrice} × {returnItem.returnQty}
+                            {currencySymbol}{poItem.unitPrice} × {returnItem.returnQty}
                           </p>
                         </div>
                       </div>
@@ -263,7 +269,7 @@ export const ViewReturnDialog: React.FC<ViewReturnDialogProps> = ({
                 </div>
                 <div className="text-right">
                   <p className="text-4xl font-bold text-orange-900">
-                    £{totalReturnAmount}
+                    {currencySymbol}{totalReturnAmount}
                   </p>{" "}
                   <p className="text-sm text-orange-700">
                     Created: {new Date(grtn.returnDate).toLocaleDateString()}

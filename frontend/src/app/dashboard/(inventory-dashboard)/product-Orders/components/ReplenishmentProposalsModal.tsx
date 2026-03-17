@@ -29,6 +29,7 @@ export function ReplenishmentProposalsModal({
     products,
     onCreateOrders,
     isCreating = false,
+    currencySymbol,
 }: ReplenishmentProposalsModalProps) {
     
     const [showBulkEdit, setShowBulkEdit] = useState(false);
@@ -128,6 +129,7 @@ export function ReplenishmentProposalsModal({
                     filterText={filterText}
                     onFilterChange={setFilterText}
                     onResetQuantities={resetToSuggested}
+                    currencySymbol = { currencySymbol }
                 />
 
                 {/* Selection Stats Bar */}
@@ -183,6 +185,7 @@ export function ReplenishmentProposalsModal({
                                             onToggle={toggleOne}
                                             onQuantityChange={handleQuantityChange}
                                             index={idx}
+                                            currencySymbol = { currencySymbol}
                                         />
                                     );
                                 })}

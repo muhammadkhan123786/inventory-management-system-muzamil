@@ -9,6 +9,7 @@ interface HeaderProps {
     filterText: string;
     onFilterChange: (value: string) => void;
     onResetQuantities: () => void;
+    currencySymbol: string;
 }
 
 export const Header = ({
@@ -18,7 +19,8 @@ export const Header = ({
     criticalCount,
     filterText,
     onFilterChange,
-    onResetQuantities
+    onResetQuantities,
+    currencySymbol
 }: HeaderProps) => {
     return (
         <div className="relative bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 px-8 py-6 shrink-0">
@@ -72,7 +74,7 @@ export const Header = ({
                             </div>
                             <div>
                                 <p className="text-xs text-indigo-200">Est. Total</p>
-                                <p className="text-lg font-bold text-white">£{estimatedTotal.toFixed(2)}</p>
+                                <p className="text-lg font-bold text-white">{currencySymbol}{estimatedTotal.toFixed(2)}</p>
                             </div>
                         </div>
                     </div>

@@ -3,7 +3,7 @@ import { ShoppingCart, Loader2, Package, CheckCircle ,Clock , Calendar, DollarSi
 import { useSupplierOrders } from "../../hooks/useSupplierOrders";
 import { Badge } from "@/components/form/Badge";
 
-interface Props { supplierId: string; userId: string }
+interface Props { supplierId: string; userId: string, currencySymbol: string }
 
 const STATUS_CONFIG: Record<string, { label: string; gradient: string; dot: string }> = {
   draft:     { label: "Draft",     gradient: "from-gray-500 to-slate-500", dot: "bg-gray-400" },
@@ -12,7 +12,7 @@ const STATUS_CONFIG: Record<string, { label: string; gradient: string; dot: stri
   cancelled: { label: "Cancelled", gradient: "from-red-500 to-rose-500", dot: "bg-red-500" },
 };
 
-export function OrdersTab({ supplierId, userId }: Props) {
+export function OrdersTab({ supplierId, userId, currencySymbol }: Props) {
   const { orders, loading } = useSupplierOrders(supplierId, userId);
 
   if (loading) return (
@@ -119,7 +119,7 @@ export function OrdersTab({ supplierId, userId }: Props) {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Value</p>
-                <p className="text-2xl font-bold text-gray-800">£{totalValue.toFixed(0)}</p>
+                <p className="text-2xl font-bold text-gray-800">{currencySymbol}{totalValue.toFixed(0)}</p>
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export function OrdersTab({ supplierId, userId }: Props) {
                         </Badge>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-gray-800">£{(po.total || 0).toFixed(2)}</span>
+                        <span className="text-sm font-bold text-gray-800">{currencySymbol}{(po.total || 0).toFixed(2)}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="relative inline-block">
