@@ -17,14 +17,13 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
     set({ loading: true });
 
     try {
-      const { currencies } = await DropdownService.fetchOnlyTaxAndCurrency();
+      const { currencies } =
+        await DropdownService.fetchOnlyTaxAndCurrency();
 
-      // extract symbol from label "Dollar - $"
       const symbol =
         currencies?.[0]?.label?.split(" - ")[1] ?? "$";
-
       set({
-        currencies,
+        currencies: [...currencies], // new reference important
         currencySymbol: symbol,
         loading: false,
       });

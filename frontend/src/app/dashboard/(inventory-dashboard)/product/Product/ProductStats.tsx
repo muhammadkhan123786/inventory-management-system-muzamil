@@ -55,14 +55,14 @@ const STAT_CONFIGS = [
 
 
 export const ProductStatistics = ({ stats }: ProductStatsProps) => {
-  const statValues = [
-    stats.total,
-    stats.activeCount,
-    stats.inactiveCount,
-    stats.inStockCount,
-    stats.lowStockCount,
-    stats.featuredCount
-  ];
+ const statValues = [
+  stats.total,
+  stats.activeCount,
+  stats.inStockCount,
+  stats.lowStockCount,
+  stats.outOfStockCount,
+  stats.featuredCount
+];
 console.log("stats", stats)
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
