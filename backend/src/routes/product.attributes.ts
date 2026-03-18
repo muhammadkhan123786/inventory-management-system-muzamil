@@ -12,6 +12,7 @@ const productAttributesController = new AdvancedGenericController({
     service: attributesBaseService,
     populate: ["userId"],
     validationSchema: attributeSchemaValidation, 
+    searchFields: ["attributeName"]
 });
 
 productAttributesRoutes.get("/", productAttributesController.getAll);
