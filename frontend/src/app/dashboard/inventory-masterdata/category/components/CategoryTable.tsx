@@ -16,7 +16,7 @@ import { ICategory } from "../../../../../../../common/ICategory.interface";
 
 interface Props {
   data: ICategory[];
-  loading: boolean;
+  loading: any;
   /** Controlled by CategoryDashboard — triggers a backend search request */
   searchTerm: string;
   onSearchChange: (value: string) => void;

@@ -1,5 +1,4 @@
 // utils/categoryTransform.ts - Transform API categories to component format
-import { DatabaseCategory } from '@/hooks/useCategory';
 
 export interface ComponentCategory {
   id: string;
@@ -12,14 +11,14 @@ export interface ComponentCategory {
  * Transform database categories to component-compatible format
  */
 export const transformCategoriesToComponentFormat = (
-  dbCategories: DatabaseCategory[]
+  dbCategories: any[]
 ): ComponentCategory[] => {
   if (!dbCategories || !Array.isArray(dbCategories)) {
     return [];
   }
 
   // Helper to calculate level
-  const calculateLevel = (category: DatabaseCategory, allCategories: DatabaseCategory[]): number => {
+  const calculateLevel = (category: any, allCategories: any[]): number => {
     if (!category.parentId) return 1;
     
     let level = 1;

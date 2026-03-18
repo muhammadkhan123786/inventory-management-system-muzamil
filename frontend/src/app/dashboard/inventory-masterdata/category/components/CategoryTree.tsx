@@ -18,7 +18,7 @@ import {
 
 interface TreeProps {
   data: ICategory[];
-  loading: boolean;
+  loading: any;
   /** Controlled by CategoryDashboard */
   searchTerm: string;
   onSearchChange: (value: string) => void;

@@ -1,7 +1,6 @@
 // hooks/useProductFilters.ts
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { DatabaseCategory } from "./useCategory";
 
 export interface ProductFilterParams {
   search: string;
@@ -16,7 +15,7 @@ export interface ProductFilterParams {
 }
 
 interface UseProductFiltersProps {
-  categories?: DatabaseCategory[];
+  categories?: any;
   searchDebounceMs?: number;   // default 400ms
 }
 
@@ -81,12 +80,12 @@ export const useProductFilters = ({
     const options: { value: string; label: string; level: number }[] = [
       { value: "all", label: "All Categories", level: 0 },
     ];
-    const addWithChildren = (cat: DatabaseCategory, level: number = 1) => {
+    const addWithChildren = (cat: any, level: number = 1) => {
       const prefix = "─".repeat(level - 1) + (level > 1 ? " " : "");
       options.push({ value: cat._id, label: `${prefix}${cat.categoryName}`, level });
-      categories.filter(c => c.parentId === cat._id).forEach(child => addWithChildren(child, level + 1));
+      categories.filter((c: any) => c.parentId === cat._id).forEach((child: any) => addWithChildren(child, level + 1));
     };
-    categories.filter(c => !c.parentId).forEach(root => addWithChildren(root, 1));
+    categories.filter((c: any) => !c.parentId).forEach((root: any) => addWithChildren(root, 1));
     return options;
   }, [categories]);
 

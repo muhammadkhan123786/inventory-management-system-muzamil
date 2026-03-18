@@ -4,13 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/form/Card";
 import { Input } from "@/components/form/Input";
 import { Button } from "@/components/form/CustomButton";
-import {
-  Search,
-  X,
-  ChevronDown,
-  Filter,
-  Star,
-} from "lucide-react";
+import { Search, X, ChevronDown, Filter, Star } from "lucide-react";
+import { ICategory } from "@common/ICategory.interface";
 
 interface CategoryFiltersProps {
   searchTerm: string;
@@ -18,13 +13,7 @@ interface CategoryFiltersProps {
   selectedStatus: string;
   selectedStockStatus: string;
   showFeaturedOnly: boolean;
-  categories?: Array<{
-    _id: string;
-    categoryName: string;
-    parentId?: string | null;
-    children?: any[];
-    [key: string]: any;
-  }>;
+  categories?: Array<ICategory<string, string, string | null>>;
   onSearchChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onStatusChange: (value: string) => void;
@@ -74,61 +63,46 @@ export const CategoryFilters = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Build category tree
+  // --- Build category tree safely ---
   const categoryTree = useMemo(() => {
     if (!categories || categories.length === 0) return [];
 
-    const hasPrebuiltChildren = categories.some(c => c.children && Array.isArray(c.children) && c.children.length > 0);
-    
-    if (hasPrebuiltChildren) {
-      const roots = categories.filter(c => !c.parentId).map(c => ({
-        ...c,
-        id: c._id,
-        name: c.categoryName,
-        children: c.children || []
-      }));
-      
-      const processNode = (node: any): any => {
-        const processed = {
-          ...node,
-          id: node._id || node.id,
-          name: node.categoryName || node.name,
-          children: []
-        };
-        
-        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-          processed.children = node.children.map(processNode);
-        }
-        
-        return processed;
-      };
-      
-      return roots.map(processNode);
-    }
-    
     const categoryMap = new Map<string, any>();
     const roots: any[] = [];
 
-    categories.forEach((category) => {
-      if (category && category._id) {
-        categoryMap.set(category._id, {
-          ...category,
-          id: category._id,
-          name: category.categoryName,
-          children: [],
-        });
-      }
-    });
-
+    // Normalize categories and store in map
     categories.forEach((category) => {
       if (!category || !category._id) return;
+
+      categoryMap.set(category._id, {
+        ...category,
+        id: category._id,
+        name: category.categoryName,
+        children: [],
+      });
+    });
+
+    // Build tree
+    categories.forEach((category) => {
+      if (!category || !category._id) return;
+
       const node = categoryMap.get(category._id);
       if (!node) return;
 
-      if (category.parentId && categoryMap.has(category.parentId)) {
-        const parent = categoryMap.get(category.parentId);
+      // Normalize parentId to string
+      let parentIdKey: string | undefined;
+      if (!category.parentId) {
+        parentIdKey = undefined;
+      } else if (typeof category.parentId === "string") {
+        parentIdKey = category.parentId;
+      } else if ("_id" in category.parentId && typeof category.parentId._id === "string") {
+        parentIdKey = category.parentId._id;
+      }
+
+      if (parentIdKey && categoryMap.has(parentIdKey)) {
+        const parent = categoryMap.get(parentIdKey);
         if (parent) parent.children.push(node);
-      } else if (!category.parentId) {
+      } else if (!parentIdKey) {
         roots.push(node);
       }
     });
@@ -136,53 +110,48 @@ export const CategoryFilters = ({
     return roots;
   }, [categories]);
 
-  // Flatten all categories for simple display
+  // --- Flatten categories ---
   const flatCategories = useMemo(() => {
     const flatten = (nodes: any[], parentDepth: number = -1): FlatCategory[] => {
       const result: FlatCategory[] = [];
-      
       nodes.forEach((node) => {
         const nodeId = node._id || node.id;
         const hasChildren = node.children && node.children.length > 0;
-        
-        // Only top-level categories (parentDepth === -1) are parents
+
         result.push({
           id: nodeId,
           name: node.name,
-          isParent: parentDepth === -1, // Only first level is bold
-          depth: 0, // All in straight line
+          isParent: parentDepth === -1,
+          depth: 0, // straight line
         });
-        
+
         if (hasChildren) {
           result.push(...flatten(node.children, parentDepth + 1));
         }
       });
-      
       return result;
     };
-    
     return flatten(categoryTree);
   }, [categoryTree]);
 
-  // Get selected category name
+  // --- Get selected category name ---
   const selectedCategoryName = useMemo(() => {
     if (selectedCategory === "all") return "All Categories";
-    const category = flatCategories.find(c => c.id === selectedCategory);
+    const category = flatCategories.find((c) => c.id === selectedCategory);
     return category ? category.name : "Select Category";
   }, [selectedCategory, flatCategories]);
 
-  // Filter categories based on main search
+  // --- Filter categories by search term ---
   const filteredCategories = useMemo(() => {
     if (!searchTerm.trim()) return flatCategories;
     const searchLower = searchTerm.toLowerCase();
-    return flatCategories.filter(cat => cat.name.toLowerCase().includes(searchLower));
+    return flatCategories.filter((cat) => cat.name.toLowerCase().includes(searchLower));
   }, [flatCategories, searchTerm]);
 
   const handleSelect = (categoryId: string) => {
     onCategoryChange(categoryId);
     setIsOpen(false);
   };
-
   return (
     <Card className="border border-gray-200 shadow-sm bg-white">
       <CardContent className="p-4 space-y-4">

@@ -15,6 +15,7 @@ import { fetchAttributes } from "@/hooks/useAttributes";
 import { createProduct } from "@/helper/products";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { ICategory } from "@common/ICategory.interface";
 
 // ─── Variant types ─────────────────────────────────────────────────────────────
 
@@ -171,16 +172,26 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
   }, [selectedPath]);
 
   // ─── Fetch categories once ─────────────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchCategories();
-        setFetchedCategories(data.data ?? []);
-      } catch (err) {
-        console.error("Error fetching categories:", err);
-      }
-    })();
-  }, []);
+ useEffect(() => {
+  (async () => {
+    try {
+      const data = await fetchCategories();
+
+      const normalizeCategory = (cat: ICategory<string, string, string | null>): CategoryNode => ({
+        _id: cat._id || "",
+        categoryName: cat.categoryName,
+        parentId: typeof cat.parentId === "string" ? cat.parentId : cat.parentId?._id || null,
+        children: (cat.children || []).map(normalizeCategory),       
+      });
+
+      const normalized: CategoryNode[] = (data.data ?? []).map(normalizeCategory);
+
+      setFetchedCategories(normalized);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  })();
+}, []);
 
   // ─── Category helpers ──────────────────────────────────────────────────────
   const handleCategorySelect = useCallback((level: number, value: string) => {

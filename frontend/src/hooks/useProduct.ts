@@ -5,7 +5,6 @@ import axios from "axios";
 import { transformProductsResponse, transformProduct } from "../lib/productTransformer";
 import { ProductListItem } from "@/app/dashboard/(inventory-dashboard)/product/types/product";
 import { useProductFilters } from "./useProductFilters";
-import { DatabaseCategory } from "./useCategory";
 
 interface Statistics {
   total: number;
@@ -21,7 +20,7 @@ interface UseProductsOptions {
   autoFetch?: boolean;
   initialPage?: number;
   initialLimit?: number;
-  categories?: DatabaseCategory[];
+  categories?: any;
 }
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/products`;
