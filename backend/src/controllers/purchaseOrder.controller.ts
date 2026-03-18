@@ -515,7 +515,7 @@ export class PurchaseOrderCustomController {
       }
 
       const pdfBuffer = await generatePdfFromTemplate("purchase-orders", {
-        companyName: "Humber Mobility Scooter",
+        companyName: "Inventory System",
         reportTitle: "Purchase Order Report",
         generatedAt: new Date().toLocaleDateString("en-GB"),
         orders,
@@ -586,7 +586,8 @@ export class PurchaseOrderCustomController {
     try {
       const {
         userId,
-        buyerCompany = "Humber Mobility Scooter",
+        // buyerCompany = "Humber Mobility Scooter",
+        buyerCompany = "Inventory System",
         buyerEmail = "",
         groups = [],
       } = req.body as {

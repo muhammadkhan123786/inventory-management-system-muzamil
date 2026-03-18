@@ -311,7 +311,7 @@ Inventory Hub — Real-Time Inventory. Anywhere, Anytime.                </p>
                         Administrator
                       </span>
                       <span className="text-xs text-gray-500">
-                        admin@humber.com
+                        admin@inventory.com
                       </span>
                     </div>
                   </div>

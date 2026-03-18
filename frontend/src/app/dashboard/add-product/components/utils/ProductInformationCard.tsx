@@ -174,7 +174,7 @@ export function ProductInformationCard({
                   value={formData.productName}
                   onChange={(e) => onInputChange("productName", e.target.value)}
                   placeholder="e.g., Travel Mobility Scooter Pro"
-                  className="border-2 border-blue-200 focus:border-blue-500"
+                   className="border-2 border-cyan-200 focus:border-cyan-500"
                 />
               </div>
               <div>
@@ -194,9 +194,9 @@ export function ProductInformationCard({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {(
                 [
-                  { field: "brand", label: "Brand", placeholder: "e.g., Pride", color: "blue" },
+                  { field: "brand", label: "Brand", placeholder: "e.g., Pride", color: "cyan" },
                   { field: "manufacturer", label: "Manufacturer", placeholder: "e.g., Pride Mobility", color: "cyan" },
-                  { field: "modelNumber", label: "Model Number", placeholder: "e.g., GO-GO-ELITE", color: "sky" },
+                  { field: "modelNumber", label: "Model Number", placeholder: "e.g., GO-GO-ELITE", color: "cyan" },
                 ] as const
               ).map(({ field, label, placeholder, color }) => (
                 <div key={field}>
@@ -222,7 +222,7 @@ export function ProductInformationCard({
                 value={formData.barcode}
                 onChange={(e) => onInputChange("barcode", e.target.value)}
                 placeholder="e.g., 5060123456789"
-                className="border-2 border-blue-200 focus:border-blue-500"
+                 className="border-2 border-cyan-200 focus:border-cyan-500"
               />
             </div>
 
@@ -254,7 +254,7 @@ export function ProductInformationCard({
                 onChange={(e) => onInputChange("description", e.target.value)}
                 placeholder="Detailed product description, features, benefits..."
                 rows={6}
-                className="border-2 border-blue-200 focus:border-blue-500"
+                 className="border-2 border-cyan-200 focus:border-cyan-500"
               />
             </div>
 
@@ -264,7 +264,7 @@ export function ProductInformationCard({
               placeholder="Type a keyword and press Enter..."
               value={formData.keywords}
               onChange={(val) => onInputChange("keywords", val)}
-              colorClass="blue"
+              colorClass="cyan"
             />
 
             {/* Tags — same behaviour as keywords */}
@@ -273,7 +273,7 @@ export function ProductInformationCard({
               placeholder="Type a tag and press Enter..."
               value={formData.tags}
               onChange={(val) => onInputChange("tags", val)}
-              colorClass="indigo"
+              colorClass="cyan"
             />
           </div>
         </CardContent>

@@ -232,7 +232,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
                   <div className="flex items-center gap-2">
                     <Zap className="h-6 w-6 text-white fill-white/20" />
                     <span className="text-xl font-bold text-white tracking-tight">
-                      Humber Mobility
+                     Inventory System
                     </span>
                   </div>
                   <button
@@ -273,7 +273,7 @@ export default function Layout({ children, onLogout }: LayoutProps) {
           <div className="flex flex-col h-full bg-linear-to-br from-indigo-600 via-purple-600 to-purple-700 shadow-2xl">
             <div className="flex h-16 items-center px-6 border-b border-white/10 text-white gap-2 shrink-0">
               <Zap className="h-5 w-5 fill-white/20" />
-              <h1 className="text-xl font-semibold">Humber Mobility</h1>
+              <h1 className="text-xl font-semibold">Inventory System</h1>
             </div>
 
             <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar">

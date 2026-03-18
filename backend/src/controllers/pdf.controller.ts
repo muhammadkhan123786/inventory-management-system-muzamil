@@ -23,7 +23,7 @@ export const exportGRNToPDF = async (req: Request, res: Response) => {
       : 'N/A';
 
     const pdfData = {
-      companyName: "Humber Mobility Scooter",
+      companyName: "Inventory System",
       reportTitle: "Goods Received Note",
       generatedAt: new Date().toLocaleDateString('en-GB'),
       grn: {

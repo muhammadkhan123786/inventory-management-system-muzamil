@@ -11,7 +11,7 @@ import { Toaster } from "react-hot-toast";
 
 
 export const metadata: Metadata = {
-  title: "Humber Mobility",
+  title: "Inventory System",
   description: "Technicians and workshops connections",
 };
 
