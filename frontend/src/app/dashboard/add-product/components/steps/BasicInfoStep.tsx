@@ -1,45 +1,33 @@
+"use client";
 import { useCallback } from "react";
 import { ProductInformationCard } from "../utils/ProductInformationCard";
-import {  
-  BasicInfoStepProps,  
-} from "../../types/product";
-
-type Props = BasicInfoStepProps;
+import { BasicInfoStepProps } from "../../types/product";
 
 export function BasicInfoStep({
   formData,
-  tags,
   images,
-  newTag,
   onInputChange,
-  onAddTag,
-  onRemoveTag,
-  onNewTagChange,
   onImageUpload,
-  onRemoveImage,  
-}: Props) {
-
+  onRemoveImage,
+  setImage,
+}: BasicInfoStepProps) {
   const handleRemoveImage = useCallback(
-  (index: number) => {
-    URL.revokeObjectURL(images[index]?.preview);
-    onRemoveImage(index);
-  },
-  [images, onRemoveImage]
-);
+    (index: number) => {
+      const preview = images[index]?.preview;
+      if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
+      onRemoveImage(index);
+    },
+    [images, onRemoveImage]
+  );
 
   return (
     <ProductInformationCard
       formData={formData}
-      tags={tags}
-      images={images || []}
-      newTag={newTag}
+      images={images ?? []}
       onInputChange={onInputChange}
-      onAddTag={onAddTag}
-      onRemoveTag={onRemoveTag}
-      onNewTagChange={onNewTagChange}
       onImageUpload={onImageUpload}
       onRemoveImage={handleRemoveImage}
-      
+      setImage={setImage}
     />
   );
 }

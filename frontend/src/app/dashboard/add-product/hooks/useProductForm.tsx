@@ -1,20 +1,23 @@
-// hooks/useProductForm.ts - UPDATED VERSION
-
 "use client";
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { CategoryNode, UseProductFormProps, Attribute, FourDropdownData } from "../types/product";
 import {
-  getCategoriesAtLevel,
-  getSelectedCategoryPath,
-} from "../utils/categoryHelpers";
+  CategoryNode,
+  UseProductFormProps,
+  Attribute,
+  FourDropdownData,
+  ProductFormData,
+  ImageItem,
+} from "../types/product";
+import { getCategoriesAtLevel, getSelectedCategoryPath } from "../utils/categoryHelpers";
 import { fetchCategories } from "@/hooks/useCategory";
 import { DropdownService } from "@/helper/dropdown.service";
 import { fetchAttributes } from "@/hooks/useAttributes";
 import { createProduct } from "@/helper/products";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-// ─── Shared variant types ────────────────────────────────────────────────────
+// ─── Variant types ─────────────────────────────────────────────────────────────
+
 export interface MarketplacePricing {
   id: string;
   marketplaceId: string;
@@ -51,154 +54,135 @@ export interface ProductVariant {
   supplierId: string;
 }
 
-export function useProductForm({
-  initialData,
-  onSubmit,
-  categories,
-}: UseProductFormProps) {
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function csvToArray(csv: string): string[] {
+  return csv.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+  });
+}
+
+// ─── Hook ──────────────────────────────────────────────────────────────────────
+
+export function useProductForm({ initialData, onSubmit, categories }: UseProductFormProps) {
+  const router = useRouter();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPath, setSelectedPath] = useState<string[]>([]);
   const [dynamicFields, setDynamicFields] = useState<Record<string, any>>({});
-  const [tags, setTags] = useState<string[]>([]);
+  const [formData, setFormData] = useState<ProductFormData>(initialData);
 
-  const [images, setImages] = useState<{
-    file: File;
-    preview: string;
-    name: string;
-    base64?: string;
-  }[]>([]);
+  // Local image objects (preview + base64 for non-AI path)
+  const [images, setImages] = useState<ImageItem[]>([]);
+  // Server URLs returned by the AI upload endpoint — used at submit time when available
+  const [serverImageUrls, setServerImageUrls] = useState<string[]>([]);
 
-  const [newTag, setNewTag] = useState("");
-  const [fetchedCategories, setFetchedCategories] = useState<CategoryNode[]>(categories);
-  const [formData, setFormData] = useState(initialData);
-  const router = useRouter();
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [fetchedCategories, setFetchedCategories] = useState<CategoryNode[]>(categories);
   const [dropdowns, setDropdowns] = useState<Partial<FourDropdownData>>({});
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
-
-  // ─── NEW: Category attribute-filter state ────────────────────────────────
-  // undefined  = not yet fetched  → combobox shows spinner, list is empty
-  // new Set()  = fetched, none have attributes → combobox shows empty hint
-  // new Set([…]) = fetched with results → combobox shows only those categories
   const [attributeCategoryIds, setAttributeCategoryIds] = useState<Set<string> | undefined>(undefined);
   const [attributeIdsLoading, setAttributeIdsLoading] = useState(true);
 
-  // ─── Warranty options ────────────────────────────────────────────────────
-  const getWarrantyOptions = () => [
-    { value: "manufacturer", label: "Manufacturer Warranty" },
-    { value: "seller", label: "Seller Warranty" },
-    { value: "no_warranty", label: "No Warranty" },
-    { value: "extended", label: "Extended Warranty" },
-    { value: "lifetime", label: "Lifetime Warranty" },
-  ];
+  // ─── Warranty options ──────────────────────────────────────────────────────
+  const getWarrantyOptions = useCallback(
+    () => [
+      { value: "manufacturer", label: "Manufacturer Warranty" },
+      { value: "seller", label: "Seller Warranty" },
+      { value: "no_warranty", label: "No Warranty" },
+      { value: "extended", label: "Extended Warranty" },
+      { value: "lifetime", label: "Lifetime Warranty" },
+    ],
+    []
+  );
 
-  // ─── Fetch all category IDs that have attributes (runs once on mount) ────
+  // ─── One-time: fetch all category IDs that have attributes ────────────────
   useEffect(() => {
-    const loadAttributeCategoryIds = async () => {
+    (async () => {
       try {
         setAttributeIdsLoading(true);
-        // Broad fetch — adjust page size to your dataset
         const res = await fetchAttributes(1, 500, "", "");
-        const all: Attribute[] = res.data || [];
-
-        // Collect every unique categoryId that has at least one attribute
-        const ids = new Set(all.map((a: Attribute) => a.categoryId));
+        const ids = new Set<string>((res.data ?? []).map((a: Attribute) => a.categoryId));
         setAttributeCategoryIds(ids);
-      } catch (err) {
-        console.error("Failed to load attribute category ids", err);
-        // Empty Set on error → show nothing, not everything
+      } catch {
         setAttributeCategoryIds(new Set());
       } finally {
         setAttributeIdsLoading(false);
       }
-    };
-
-    loadAttributeCategoryIds();
+    })();
   }, []);
 
-  // ─── Fetch dropdowns when step changes ───────────────────────────────────
+  // ─── Fetch dropdowns only when step 3 is first reached ────────────────────
   useEffect(() => {
-    const loadDropdowns = async () => {
-      if (dropdownLoading) return;
-
+    if (currentStep !== 3 || dropdownLoading) return;
+    (async () => {
       try {
         setDropdownLoading(true);
-
-        if (currentStep === 3) {
-          const data = await DropdownService.fetchOnlyTaxAndCurrency();
-          setDropdowns((prev) => ({
-            ...prev,
-            taxes: data.taxes,
-            currencies: data.currencies,
-          }));
-        }
-
-        if (currentStep === 3) {
-          const data = await DropdownService.fetchOnlyWarehouse();
-          setDropdowns((prev) => ({
-            ...prev,
-            warehouses: data.warehouses,
-            warehouseStatus: data.warehouseStatus,
-            productStatus: data.productStatus,
-            conditions: data.conditions,
-          }));
-        }
-      } catch (error) {
-        console.error("Dropdown loading failed", error);
+        const [taxCurrency, warehouse] = await Promise.all([
+          DropdownService.fetchOnlyTaxAndCurrency(),
+          DropdownService.fetchOnlyWarehouse(),
+        ]);
+        setDropdowns({
+          taxes: taxCurrency.taxes,
+          currencies: taxCurrency.currencies,
+          warehouses: warehouse.warehouses,
+          warehouseStatus: warehouse.warehouseStatus,
+          productStatus: warehouse.productStatus,
+          conditions: warehouse.conditions,
+        });
+      } catch (err) {
+        console.error("Dropdown loading failed", err);
       } finally {
         setDropdownLoading(false);
       }
-    };
+    })();
+  }, [currentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    loadDropdowns();
-  }, [currentStep]);
-
-  // ─── Fetch attributes for the selected category path ─────────────────────
+  // ─── Fetch attributes whenever selectedPath changes ────────────────────────
   useEffect(() => {
     if (!selectedPath.length) {
       setAttributes([]);
       return;
     }
-
-    const loadAttributes = async () => {
+    (async () => {
       try {
         const res = await fetchAttributes(1, 100, "", selectedPath.join(","));
-        const allAttributes: Attribute[] = res.data || [];
-        const selectedCategoryId = selectedPath.at(-1);
-
-        const filteredAttributes = allAttributes.filter((attr) => {
-          if (attr.categoryId === selectedCategoryId) return true;
-          if (attr.isForSubcategories && selectedPath.includes(attr.categoryId)) {
-            return true;
-          }
-          return false;
-        });
-
-        setAttributes(filteredAttributes);
-      } catch (err) {
-        console.error("Attribute fetch failed", err);
+        const all: Attribute[] = res.data ?? [];
+        const leafId = selectedPath.at(-1);
+        setAttributes(
+          all.filter(
+            (attr) =>
+              attr.categoryId === leafId ||
+              (attr.isForSubcategories && selectedPath.includes(attr.categoryId))
+          )
+        );
+      } catch {
         setAttributes([]);
       }
-    };
+    })();
+  }, [selectedPath]);
 
-    loadAttributes();
-  }, [currentStep, selectedPath]);
-
-  // ─── Fetch categories ─────────────────────────────────────────────────────
+  // ─── Fetch categories once ─────────────────────────────────────────────────
   useEffect(() => {
-    const fetchCategoriesData = async () => {
+    (async () => {
       try {
         const data = await fetchCategories();
-        setFetchedCategories(data.data as any || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+        setFetchedCategories(data.data ?? []);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
       }
-    };
-    fetchCategoriesData();
+    })();
   }, []);
 
-  // ─── Category helpers ─────────────────────────────────────────────────────
+  // ─── Category helpers ──────────────────────────────────────────────────────
   const handleCategorySelect = useCallback((level: number, value: string) => {
     setSelectedPath((prev) => {
       const next = prev.slice(0, level);
@@ -207,156 +191,111 @@ export function useProductForm({
     });
   }, []);
 
-  /**
-   * NEW: Set the entire selectedPath at once from a flat category selection.
-   * CategoryStep calls this with the full pathIds array so all levels
-   * auto-populate without cascading clicks.
-   */
   const handleFullPathSelect = useCallback((pathIds: string[]) => {
     setSelectedPath(pathIds);
   }, []);
 
-  const selectedCategories = useMemo(() => {
-    return getSelectedCategoryPath(fetchedCategories || [], selectedPath);
-  }, [fetchedCategories, selectedPath]);
+  const selectedCategories = useMemo(
+    () => getSelectedCategoryPath(fetchedCategories ?? [], selectedPath),
+    [fetchedCategories, selectedPath]
+  );
 
   const getCategoriesAtLevelFromHook = useCallback(
-    (level: number) => {
-      if (!fetchedCategories || !Array.isArray(fetchedCategories)) {
-        return [];
-      }
-      return getCategoriesAtLevel(fetchedCategories, selectedPath, level);
-    },
-    [fetchedCategories, selectedPath],
+    (level: number) =>
+      Array.isArray(fetchedCategories)
+        ? getCategoriesAtLevel(fetchedCategories, selectedPath, level)
+        : [],
+    [fetchedCategories, selectedPath]
   );
 
   const getSelectedCategory = useCallback(
     (level?: number) => {
-      if (selectedCategories.length === 0) return null;
-      if (level !== undefined) {
-        return selectedCategories[level] || null;
-      }
-      return selectedCategories[selectedCategories.length - 1];
+      if (!selectedCategories.length) return null;
+      return level !== undefined
+        ? (selectedCategories[level] ?? null)
+        : selectedCategories[selectedCategories.length - 1];
     },
-    [selectedCategories],
+    [selectedCategories]
   );
 
-  const getAllFields = useCallback(() => {
-    const fields: any[] = [];
-    return fields;
-  }, [selectedCategories]);
-
-  // ─── Step navigation ──────────────────────────────────────────────────────
+  // ─── Step navigation ───────────────────────────────────────────────────────
   const nextStep = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault();
       e.stopPropagation();
-
       if (currentStep < 5) {
-        setCurrentStep((prev) => prev + 1);
+        setCurrentStep((s) => s + 1);
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
-    [currentStep],
+    [currentStep]
   );
 
   const prevStep = useCallback(() => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep((s) => s - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [currentStep]);
 
-  // ─── Form field handlers ──────────────────────────────────────────────────
+  // ─── Form field handlers ───────────────────────────────────────────────────
   const handleInputChange = useCallback((field: string, value: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleDynamicFieldChange = useCallback(
-    (fieldName: string, value: any) => {
-      setDynamicFields((prev) => ({
-        ...prev,
-        [fieldName]: value,
-      }));
-    },
-    [],
-  );
-
-  // ─── Tag handlers ─────────────────────────────────────────────────────────
-  const addTag = useCallback(() => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags((prev) => [...prev, newTag.trim()]);
-      setNewTag("");
-    }
-  }, [newTag, tags]);
-
-  const onBulkAddTags = (newTagsArray: string[]) => {
-    setTags((prevTags) => {
-      const combined = [...prevTags, ...newTagsArray];
-      return Array.from(new Set(combined));
-    });
-  };
-
-  const removeTag = useCallback((tagToRemove: string) => {
-    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
+  const handleDynamicFieldChange = useCallback((fieldName: string, value: any) => {
+    setDynamicFields((prev) => ({ ...prev, [fieldName]: value }));
   }, []);
 
-  // ─── Image handlers ───────────────────────────────────────────────────────
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  const handleImageUpload = useCallback(
-    async (files: FileList | File[]) => {
-      const fileArray: File[] = Array.isArray(files) ? files : Array.from(files);
-      const validFiles = fileArray.filter((file) => file instanceof File);
-
-      const formattedImagesPromises = validFiles.map(async (file) => {
-        const base64 = await fileToBase64(file);
-        return {
-          file,
-          preview: URL.createObjectURL(file),
-          name: file.name,
-          base64,
-        };
-      });
-
-      const formattedImages = await Promise.all(formattedImagesPromises);
-      setImages((prev) => [...prev, ...formattedImages]);
-    },
-    []
-  );
+  // ─── Image handlers ────────────────────────────────────────────────────────
+  const handleImageUpload = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter((f) => f instanceof File);
+    const formatted = await Promise.all(
+      fileArray.map(async (file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+        name: file.name,
+        base64: await fileToBase64(file),
+      }))
+    );
+    setImages((prev) => [...prev, ...formatted]);
+    // New local upload invalidates any stale server URLs
+    setServerImageUrls([]);
+  }, []);
 
   const removeImage = useCallback((index: number) => {
     setImages((prev) => {
-      if (prev[index]?.preview) {
-        URL.revokeObjectURL(prev[index].preview);
-      }
+      const preview = prev[index]?.preview;
+      if (preview?.startsWith("blob:")) URL.revokeObjectURL(preview);
       return prev.filter((_, i) => i !== index);
     });
+    setServerImageUrls((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
+  /**
+   * Called by ImageUploadSections after the AI endpoint uploads images to the
+   * server and returns permanent URLs. These URLs are what gets stored in the DB.
+   */
+  const handleSetServerImageUrls = useCallback((urls: string[]) => {
+    setServerImageUrls(urls);
+  }, []);
+
+  // ─── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      const base64Images = images.map((img) => img.base64 || '');
+      /**
+       * Image priority:
+       *  1. serverImageUrls  → AI was used; images already on server as proper URLs
+       *  2. base64 strings   → no AI; send raw data and let the backend store them
+       */
+      const imagePayload: string[] =
+        serverImageUrls.length > 0
+          ? serverImageUrls
+          : images.map((img) => img.base64 ?? "").filter(Boolean);
 
-      const keywordsArray = (formData.keywords as string)
-        .split(",")
-        .map((k) => k.trim())
-        .filter(Boolean);
-
-      const finalData = {
+      const payload = {
         productName: formData.productName,
         sku: formData.sku,
         barcode: formData.barcode,
@@ -365,18 +304,16 @@ export function useProductForm({
         modelNumber: formData.modelNumber,
         description: formData.description,
         shortDescription: formData.shortDescription,
-        keywords: keywordsArray,
-        tags,
-        images: base64Images,
+        keywords: csvToArray(formData.keywords),
+        tags: csvToArray(formData.tags),
+        images: imagePayload,
         categoryId: selectedPath.at(-1),
         categoryPath: selectedPath,
-
         attributes: variants.map((v) => ({
           sku: v.sku,
           attributes: v.attributes,
-
           pricing: v.marketplacePricing.map((p) => ({
-             costPrice: p.costPrice,
+            costPrice: p.costPrice,
             sellingPrice: p.sellingPrice,
             retailPrice: p.retailPrice,
             discountPercentage: p.discountPercentage,
@@ -384,7 +321,6 @@ export function useProductForm({
             taxRate: p.taxRate,
             vatExempt: p.vatExempt,
           })),
-
           stock: {
             stockQuantity: v.stockQuantity,
             minStockLevel: v.minStockLevel,
@@ -400,7 +336,6 @@ export function useProductForm({
             featured: v.featured,
             supplierId: v.supplierId,
           },
-
           warranty: {
             warrantyType: v.warranty,
             warrantyPeriod: v.warrantyPeriod,
@@ -408,77 +343,57 @@ export function useProductForm({
         })),
       };
 
-      console.log("📤 Final data being sent to API:", finalData);
-
       try {
-        await createProduct(finalData as any);
-        onSubmit(finalData);
+        await createProduct(payload as any);
+        onSubmit(payload);
         toast.success("Product created successfully!");
         router.push("/dashboard/product");
-      } catch (error) {
-        console.error("❌ Error creating product:", error);
+      } catch (err) {
+        console.error("Error creating product:", err);
         toast.error("Failed to create product");
       }
     },
-    [formData, selectedPath, tags, images, variants, onSubmit, router]
+    [formData, selectedPath, images, serverImageUrls, variants, onSubmit, router]
   );
 
   return {
-    // ── Step ──────────────────────────────────────────────────────────────
-    currentStep,
-    nextStep,
-    prevStep,
-
-    // ── Form data ─────────────────────────────────────────────────────────
-    formData,
-    handleInputChange,
-    handleSubmit,
-
-    // ── Categories ────────────────────────────────────────────────────────
+    // Step
+    currentStep, nextStep, prevStep,
+    // Form
+    formData, handleInputChange, handleSubmit,
+    // Categories
     selectedPath,
-    fetchedCategories: fetchedCategories || [],
+    fetchedCategories: fetchedCategories ?? [],
     selectedCategories,
     getCategoriesAtLevel: getCategoriesAtLevelFromHook,
     handleCategorySelect,
-    handleFullPathSelect,       // ← NEW: set entire path at once
+    handleFullPathSelect,
     getSelectedCategory,
-    getAllFields,
-
-    // ── Attribute filter (for CategoryStep combobox) ───────────────────────
-    attributeCategoryIds,       // ← NEW: Set<string> | undefined
-    attributeIdsLoading,        // ← NEW: boolean
-
-    // ── Attributes ────────────────────────────────────────────────────────
+    getAllFields: useCallback(() => [], []),
+    // Attribute filter
+    attributeCategoryIds,
+    attributeIdsLoading,
+    // Attributes
     attributes,
-
-    // ── Dynamic fields ────────────────────────────────────────────────────
+    // Dynamic fields
     dynamicFields,
     setDynamicFields,
     handleDynamicFieldChange,
-
-    // ── Dropdowns ─────────────────────────────────────────────────────────
+    // Dropdowns
     dropdowns,
     dropdownLoading,
-
-    // ── Tags ──────────────────────────────────────────────────────────────
-    tags,
-    newTag,
-    setNewTag,
-    addTag,
-    removeTag,
-    onBulkAddTags,
-
-    // ── Images ────────────────────────────────────────────────────────────
+    // Images — local ImageItem[] for previews
     images,
     setImages,
     handleImageUpload,
     removeImage,
-
-    // ── Variants ──────────────────────────────────────────────────────────
+    // Server URLs after AI upload — pass this as the `setImage` prop
+    setServerImageUrls: handleSetServerImageUrls,
+    serverImageUrls,
+    // Variants
     variants,
     setVariants,
-
-    // ── Misc ──────────────────────────────────────────────────────────────
+    // Misc
     getWarrantyOptions,
   };
 }

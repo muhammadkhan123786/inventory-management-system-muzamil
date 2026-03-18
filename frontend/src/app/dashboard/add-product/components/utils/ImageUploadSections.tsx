@@ -1,210 +1,167 @@
-'use client'
-import React from 'react'
+"use client";
 import { useState, useCallback, useEffect } from "react";
-import { AISuggestionsPanel } from './AISuggestionsPanel';
-import ImageUpload from "./ImageUpload" // Make sure this component exists
-
-interface UploadedImage {
-  id: string;
-  preview: string;
-  file?: File;
-  progress: number;
-  isUploading: boolean;
-}
-
-interface AIResponse {
-  success: boolean;
-  imageCount: number;
-  imageUrls: any;
-  ai: {
-    shortDescription: string;
-    description: string;
-    tags: string[];
-    keywords: string;
-  };
-}
+import { AISuggestionsPanel } from "./AISuggestionsPanel";
+import ImageUpload from "./ImageUpload";
+import { AIResponse, ImageItem, UploadedImage, BASE_URL } from "../../types/product";
 
 interface ImageUploadSectionsProps {
-  images: string[];
-  tags: string[];
+  images: ImageItem[];
   formData: {
-    productName: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    manufacturer: string;
-    modelNumber: string;
     description: string;
     shortDescription: string;
     keywords: string;
+    tags: string;
+    [key: string]: any;
   };
   onInputChange: (field: string, value: string) => void;
-  onAddTag: () => void;
-  onRemoveTag?: (tag: string) => void;
-  onNewTagChange: (value: string) => void;
-  onImageUpload: (files: FileList | File[]) => void;
-onRemoveImage: (index: number, imageId: string) => void;
-  setImage: any;
+  onImageUpload: (files: FileList | File[]) => Promise<void> | void;
+  onRemoveImage: (index: number) => void;
+  /** Called with server-stored URLs after AI upload */
+  setImage: (urls: string[]) => void;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api";
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ImageUploadSections = ({ 
-  images, 
-  tags, 
-  onImageUpload,  
-  onAddTag, 
-  onInputChange, 
-  onNewTagChange, 
+function toUploadedImage(img: ImageItem, index: number): UploadedImage {
+  return {
+    id: `img-init-${index}`,
+    preview: img.preview,
+    file: img.file,
+    progress: 100,
+    isUploading: false,
+  };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ImageUploadSections({
+  images,
+  formData,
+  onInputChange,
+  onImageUpload,
   onRemoveImage,
-  setImage, 
-  formData 
-}: ImageUploadSectionsProps) => {
+  setImage,
+}: ImageUploadSectionsProps) {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-  const [aiSuggestions, setAiSuggestions] = useState<{
-    tags: string[];
-    description: string;
-    shortDescription: string;
-    keywords: string;
-  } | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<AIResponse["ai"] | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Sync images from parent
+  // Sync parent images into local state on first render
   useEffect(() => {
     if (images.length > 0 && uploadedImages.length === 0) {
-      const initialImages = images.map((img, index) => ({
-        id: `img-init-${index}`,
-        preview: img,
-        progress: 100,
-        isUploading: false
-      }));
-      setUploadedImages(initialImages);
+      setUploadedImages(images.map(toUploadedImage));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images]);
 
-  // Unified AI Analysis Logic
-  const handleAnalyzeWithAI = async () => {
-    // Collect all files currently in state
-    
-    const filesToAnalyze = uploadedImages
-      .map(img => img.file)
-      .filter((file): file is File => !!file);
+  // ─── File upload handler ────────────────────────────────────────────────────
+  const handleFilesUpload = useCallback(
+    async (files: FileList | File[]) => {
+      const imageFiles = Array.from(files).filter((f) =>
+        f.type.startsWith("image/")
+      );
+      if (!imageFiles.length) return;
 
-    if (filesToAnalyze.length === 0) {
-      alert("Please upload new images to analyze.");
+      const newImages: UploadedImage[] = imageFiles.map((file, i) => ({
+        id: `img-${Date.now()}-${i}`,
+        preview: URL.createObjectURL(file),
+        file,
+        progress: 100,
+        isUploading: false,
+      }));
+
+      setUploadedImages((prev) => [...prev, ...newImages]);
+      await onImageUpload(imageFiles);
+    },
+    [onImageUpload]
+  );
+
+  // ─── Remove handler ─────────────────────────────────────────────────────────
+  const handleRemoveImage = useCallback(
+    (index: number, imageId: string) => {
+      const img = uploadedImages.find((i) => i.id === imageId);
+      if (img?.preview.startsWith("blob:")) URL.revokeObjectURL(img.preview);
+      setUploadedImages((prev) => prev.filter((i) => i.id !== imageId));
+      onRemoveImage(index);
+    },
+    [uploadedImages, onRemoveImage]
+  );
+
+  // ─── AI analysis ────────────────────────────────────────────────────────────
+  const handleAnalyzeWithAI = async () => {
+    const files = uploadedImages
+      .map((img) => img.file)
+      .filter((f): f is File => Boolean(f));
+
+    if (!files.length) {
+      alert("Please upload images to analyze.");
       return;
     }
 
     setIsAnalyzing(true);
-
     try {
-      const data = new FormData();
-      filesToAnalyze.forEach(file => data.append('images', file));
+      const body = new FormData();
+      files.forEach((f) => body.append("images", f));
 
-      const response = await fetch(`${BASE_URL}/ai`, {
-        method: 'POST',
-        body: data,
-      });
+      const res = await fetch(`${BASE_URL}/ai`, { method: "POST", body });
+      const result: AIResponse = await res.json();
 
-      
-      const result: AIResponse = await response.json();
       if (result.success && result.ai) {
-        // 1. Remove duplicates from AI tags immediately
-        const uniqueTags = Array.from(new Set(result.ai.tags.map(t => t.trim())));
-        const suggestions = {
-          ...result.ai,
-          tags: uniqueTags
-        };
-// setImage((prevImages = []): string[] => {
-  
-//   const combinedImages = [...prevImages, ...result.imageUrls];
-//   return Array.from(new Set(combinedImages));
-// });
-setImage(result.imageUrls);
- setAiSuggestions(suggestions);
+        const { description, shortDescription, keywords, tags } = result.ai;
 
-        // 2. Auto-fill form if empty
-        if (!formData.description) onInputChange("description", suggestions.description);
-        if (!formData.shortDescription) onInputChange("shortDescription", suggestions.shortDescription);
-        if (!formData.keywords) onInputChange("keywords", suggestions.keywords);
+        setAiSuggestions(result.ai);
+
+        // Store server URLs so the DB receives URLs, not large base64 blobs
+        if (result.imageUrls?.length) setImage(result.imageUrls);
+
+        // Auto-fill only empty fields
+        if (!formData.description) onInputChange("description", description);
+        if (!formData.shortDescription) onInputChange("shortDescription", shortDescription);
+        if (!formData.keywords) onInputChange("keywords", keywords);
+        if (!formData.tags) onInputChange("tags", tags);
       }
-    } catch (error) {
-      console.error('AI Analysis failed:', error);
+    } catch (err) {
+      console.error("AI analysis failed:", err);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleFilesUpload = useCallback(async (files: FileList | File[]) => {
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith("image/"));
-    if (imageFiles.length === 0) return;
-
-    // Create local previews and keep track of files
-    const newImages: UploadedImage[] = imageFiles.map((file, index) => ({
-      id: `img-${Date.now()}-${index}`,
-      preview: URL.createObjectURL(file),
-      file: file,
-      progress: 100,
-      isUploading: false,
-    }));
-
-    setUploadedImages(prev => [...prev, ...newImages]);
-    
-    // Upload to parent/cloud storage
-    await onImageUpload(imageFiles);
-  }, [onImageUpload]);
-
-  const handleRemoveImage = useCallback((index: number, imageId: string) => {
-    const img = uploadedImages.find(i => i.id === imageId);
-    if (img?.preview.startsWith('blob:')) URL.revokeObjectURL(img.preview);
-    
-    onRemoveImage(index, imageId);
-    setUploadedImages(prev => prev.filter(i => i.id !== imageId));
-  }, [uploadedImages, onRemoveImage]);
-
+  // ─── Apply all AI suggestions ───────────────────────────────────────────────
   const applyAllSuggestions = useCallback(() => {
     if (!aiSuggestions) return;
-
-    // 1. Update text fields
     onInputChange("description", aiSuggestions.description);
     onInputChange("shortDescription", aiSuggestions.shortDescription);
     onInputChange("keywords", aiSuggestions.keywords);
-
-    console.log("Applying tags:", aiSuggestions.tags);
-    // 2. Add all tags at once
-    if (aiSuggestions.tags.length > 0) {
-      aiSuggestions.tags.forEach(tag => {
-        if (!tags.includes(tag)) {
-          onNewTagChange(tag);
-          onAddTag();
-        }
-      });
-    }
-
+    onInputChange("tags", aiSuggestions.tags);
     setAiSuggestions(null);
-  }, [aiSuggestions, onInputChange, tags, onNewTagChange, onAddTag]);
+  }, [aiSuggestions, onInputChange]);
 
   return (
     <div className="space-y-4">
-      < ImageUpload
+      <ImageUpload
         uploadedImages={uploadedImages}
         onFilesUpload={handleFilesUpload}
         onRemoveImage={handleRemoveImage}
         isAnalyzing={isAnalyzing}
       />
 
-      {/* Manual Trigger for AI - Better for Multi-image Context */}
       {uploadedImages.length > 0 && !aiSuggestions && (
         <div className="flex justify-center">
           <button
+            type="button"
             onClick={handleAnalyzeWithAI}
             disabled={isAnalyzing}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:bg-gray-400 transition-colors flex items-center gap-2 text-sm font-medium"
           >
             {isAnalyzing ? (
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : "✨"}
-            {isAnalyzing ? "Analyzing All Images..." : "Generate AI Description , KeyWord & Tags"}
+              <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              "✨"
+            )}
+            {isAnalyzing
+              ? "Analyzing images…"
+              : "Generate AI Description, Keywords & Tags"}
           </button>
         </div>
       )}
@@ -214,15 +171,9 @@ setImage(result.imageUrls);
           suggestions={aiSuggestions}
           onApplySuggestion={onInputChange}
           onApplyAll={applyAllSuggestions}
-          onAddTag={(tag) => {
-            onNewTagChange(tag);
-            onAddTag();
-          }}
           onClose={() => setAiSuggestions(null)}
         />
       )}
     </div>
   );
 }
-
-export default ImageUploadSections;
