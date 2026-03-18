@@ -8,7 +8,6 @@ import { Bell, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "@/components/ui/Badge";
 import { useRouter } from "next/navigation";
-import ThemeToggle from '@/components/theme/ThemeToggle';
 import { Roles } from "@/data/TestData";
 export default function Header() {
   const [messageCount] = useState<number>(1);
@@ -71,7 +70,7 @@ export default function Header() {
         </div>
         <div className="h-20">
 
-          <ThemeToggle />
+          {/* <ThemeToggle /> */}
         </div>
       </div>
     </header>

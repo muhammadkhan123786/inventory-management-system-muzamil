@@ -92,7 +92,8 @@ export interface BulkOrderResponse {
 export const createBulkPurchaseOrders = async (
   userId: string,
   groups: BulkOrderGroup[], // This now has suggestedQty/costPrice
-  buyerCompany: string = "Humber Mobility Scooter",
+  // buyerCompany: string = "Humber Mobility Scooter",
+  buyerCompany: string = "Inventory System",
   buyerEmail: string = ""
 ): Promise<BulkOrderResponse> => {
   try {

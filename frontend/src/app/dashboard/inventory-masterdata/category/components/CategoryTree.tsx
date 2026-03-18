@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ICategory } from "../../../../../../../common/ICategory.interface";
 import {
   ChevronDown,
@@ -13,36 +13,49 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Search,
 } from "lucide-react";
 
 interface TreeProps {
   data: ICategory[];
+  loading: any;
+  /** Controlled by CategoryDashboard */
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  totalCount: number;
   onEdit: (cat: ICategory) => void;
   onDelete: (id: string) => void;
   onAddSub: (parent: ICategory) => void;
-  onSetDefault: (cat: ICategory) => void; // New prop for DB update
+  onSetDefault: (cat: ICategory) => void;
 }
 
 export const CategoryTree: React.FC<TreeProps> = ({
   data,
+  loading,
+  searchTerm,
+  onSearchChange,
+  totalCount,
   onEdit,
   onDelete,
   onAddSub,
   onSetDefault,
 }) => {
+  // All nodes start expanded by default
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(
     {}
   );
+
   const toggleNode = (id: string) => {
     setExpandedNodes((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const renderNode = (
-    node: any,
+    node: ICategory,
     level: number = 1,
     parentPath: string = ""
   ) => {
-    const isExpanded = expandedNodes[node._id] !== false;
+    // Default: expanded unless explicitly set to false
+    const isExpanded = expandedNodes[node._id!] !== false;
     const hasChildren = node.children && node.children.length > 0;
     const currentPath = parentPath
       ? `${parentPath} > ${node.categoryName}`
@@ -59,21 +72,17 @@ export const CategoryTree: React.FC<TreeProps> = ({
 
     return (
       <div key={node._id} className="w-full">
-        <div
-          className={`group flex items-center justify-between hover:bg-slate-50/80 transition-all p-3 
-        ${
-          level > 1 ? "border-b border-[#F3F4F6]" : "border-b border-[#F3F4F6]"
-        }`}
-        >
-          <div className="flex items-center gap-4 ">
+        <div className="group flex items-center justify-between hover:bg-slate-50/80 transition-all p-3 border-b border-[#F3F4F6]">
+          <div className="flex items-center gap-4">
             <div
               style={{ paddingLeft: `${(level - 1) * 24}px` }}
               className="flex items-center"
             >
+              {/* Expand/collapse toggle */}
               <button
-                onClick={() => toggleNode(node._id)}
+                onClick={() => toggleNode(node._id!)}
                 className={`p-1 hover:bg-slate-200 rounded transition-colors mr-2 ${
-                  !hasChildren && "invisible"
+                  !hasChildren ? "invisible" : ""
                 }`}
               >
                 {isExpanded ? (
@@ -83,9 +92,7 @@ export const CategoryTree: React.FC<TreeProps> = ({
                 )}
               </button>
 
-              <div
-                className={`p-2 rounded-lg shadow-sm text-white ${currentColor}`}
-              >
+              <div className={`p-2 rounded-lg shadow-sm text-white ${currentColor}`}>
                 {getIcon()}
               </div>
             </div>
@@ -114,6 +121,7 @@ export const CategoryTree: React.FC<TreeProps> = ({
           </div>
 
           <div className="flex items-center gap-6">
+            {/* Status & default badges */}
             <div className="flex items-center gap-3">
               <div
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold ${
@@ -122,15 +130,10 @@ export const CategoryTree: React.FC<TreeProps> = ({
                     : "bg-red-50 border-red-100 text-red-500"
                 }`}
               >
-                {node.isActive ? (
-                  <CheckCircle2 size={12} />
-                ) : (
-                  <XCircle size={12} />
-                )}
+                {node.isActive ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                 {node.isActive ? "Active" : "Inactive"}
               </div>
 
-              {/* Star Logic: Click to trigger DB update */}
               <button
                 onClick={() => !node.isDefault && onSetDefault(node)}
                 className="transition-transform active:scale-90"
@@ -149,22 +152,11 @@ export const CategoryTree: React.FC<TreeProps> = ({
               </button>
             </div>
 
+            {/* Action buttons — visible on row hover */}
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
               <button
                 onClick={() => onAddSub(node)}
-                className="
-    flex items-center gap-1
-    px-3 py-1.5
-    text-[11px] font-bold
-    rounded-[10px]
-    border border-[#D1D5DC]
-    bg-[#F3F4F6]
-    text-black/70
-    transition-all duration-200
-    hover:bg-[#DCFCE7]
-    hover:border-[#22C55E]
-    hover:text-[#22C55E]
-  "
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold rounded-[10px] border border-[#D1D5DC] bg-[#F3F4F6] text-black/70 transition-all duration-200 hover:bg-[#DCFCE7] hover:border-[#22C55E] hover:text-[#22C55E]"
               >
                 <Plus size={14} />
                 Add Sub
@@ -172,12 +164,12 @@ export const CategoryTree: React.FC<TreeProps> = ({
 
               <button
                 onClick={() => onEdit(node)}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-[#DBEAFE] hover:border-[#8EC5FF]  rounded-[10px] border border-[#D1D5DC]"
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-[#DBEAFE] hover:border-[#8EC5FF] rounded-[10px] border border-[#D1D5DC]"
               >
                 <Pencil size={15} />
               </button>
               <button
-                onClick={() => onDelete(node._id)}
+                onClick={() => onDelete(node._id!)}
                 className="p-1.5 text-slate-400 hover:text-red-500 rounded-[10px] border border-[#D1D5DC] hover:border-red-500 hover:bg-[#FFE2E2]"
               >
                 <Trash2 size={15} />
@@ -186,11 +178,10 @@ export const CategoryTree: React.FC<TreeProps> = ({
           </div>
         </div>
 
+        {/* Render children recursively */}
         {hasChildren && isExpanded && (
-          <div className="w-full bg-slate-50/20 ">
-            {node.children.map((child: any) =>
-              renderNode(child, level + 1, currentPath)
-            )}
+          <div className="w-full bg-slate-50/20">
+            {node.children!.map((child) => renderNode(child, level + 1, currentPath))}
           </div>
         )}
       </div>
@@ -198,12 +189,45 @@ export const CategoryTree: React.FC<TreeProps> = ({
   };
 
   return (
-    <div className="w-full bg-white rounded-2xl p-4 border-b border-[#F3F4F6]">
-      {data.length > 0 ? (
-        data.map((rootNode) => renderNode(rootNode))
-      ) : (
+    <div className="w-full bg-white rounded-2xl">
+      {/* Search bar — controlled by dashboard */}
+      <div className="flex items-center gap-4 bg-white p-3 border-b border-[#F3F4F6]">
+        <div className="flex items-center gap-2 pl-2 text-gray-500 whitespace-nowrap">
+          <Search size={18} />
+          <span className="text-sm font-medium">Search:</span>
+        </div>
+        <input
+          type="text"
+          placeholder="Search categories by name..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="flex-1 py-2 outline-none text-sm"
+        />
+        <div className="bg-[#EEF2FF] text-[#6366F1] px-4 py-1.5 rounded-xl text-xs font-bold mr-2">
+          {totalCount} categories
+        </div>
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex justify-center items-center h-48">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && data.length === 0 && (
         <div className="p-20 text-center text-slate-400 italic">
-          No categories found.
+          {searchTerm
+            ? `No categories found for "${searchTerm}"`
+            : "No categories found."}
+        </div>
+      )}
+
+      {/* Tree nodes */}
+      {!loading && data.length > 0 && (
+        <div className="p-4 border-b border-[#F3F4F6]">
+          {data.map((rootNode) => renderNode(rootNode))}
         </div>
       )}
     </div>

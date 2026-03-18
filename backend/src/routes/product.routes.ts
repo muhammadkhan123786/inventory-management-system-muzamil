@@ -163,19 +163,7 @@ const mapImages = mapUploadedFilesToBody(
   ["featuredImage", "thumbnail"]
 );
 
-// ── GET / — filtered + paginated ─────────────────────────────────────────────
-/**
- * Supported query params:
- *   search        string   – searches name, sku, brand, manufacturer, etc.
- *   categoryId    string   – category _id (includes descendants automatically)
- *   status        string   – e.g. "active" | "inactive" | "draft"
- *   stockStatus   string   – e.g. "in_stock" | "out_of_stock" | "low_stock"
- *   featured      "true"   – only featured products
- *   page          number   – default 1
- *   limit         number   – default 20
- *   sortBy        string   – field name, default "createdAt"
- *   sortOrder     "asc"|"desc" – default "desc"
- */
+
 productRoutes.get(
   "/",
   buildProductFilter,

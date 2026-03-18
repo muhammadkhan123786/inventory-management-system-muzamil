@@ -400,7 +400,8 @@ const handleCreateBulkOrders = useCallback(async (groups: BulkOrderGroup[]) => {
     const result = await PurchaseOrderAPI.createBulkPurchaseOrders(
       userId,
       filteredGroups,  // This has suggestedQty/costPrice
-      "Humber Mobility Scooter",
+      // "Humber Mobility Scooter",
+      "Inventory System",
       userEmail
     );
     

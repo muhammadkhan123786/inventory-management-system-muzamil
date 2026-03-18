@@ -4,6 +4,7 @@ import { Save, Warehouse as WarehouseIcon } from "lucide-react";
 import { FormModal } from "@/app/common-form/FormModal";
 import { FormInput } from "@/app/common-form/FormInput";
 import { FormToggle } from "@/app/common-form/FormToggle";
+import { FormButton } from "@/app/common-form/FormButton";
 import {
   getAll,
   createItem,
@@ -14,12 +15,53 @@ import {
 import { warehouseDto } from "../../../../../../../common/DTOs/warehouse.dto";
 import { IWarehouseStatus } from "../../../../../../../common/IWarehouse.status.interface";
 import axios from "axios";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+// Create Zod validation schema matching TaxForm pattern
+const warehouseSchemaValidation = z.object({
+  wareHouseStatusId: z.string().min(1, "Warehouse status is required."),
+  openTime: z.string().min(1, "Open time is required."),
+  closeTime: z.string().min(1, "Close time is required."),
+  capacity: z.number().min(0, "Capacity must be 0 or greater."),
+  availableCapacity: z.number().min(0, "Available capacity must be 0 or greater."),
+  isActive: z.boolean(),
+  isDefault: z.boolean(),
+  person: z.object({
+    firstName: z.string().min(1, "First name is required."),
+    middleName: z.string().optional(),
+    lastName: z.string().min(1, "Last name is required."),
+  }),
+  contact: z.object({
+    mobileNumber: z.string().min(1, "Mobile number is required."),
+    phoneNumber: z.string().optional(),
+    emailId: z.string().email("Invalid email format").min(1, "Email is required."),
+  }),
+  address: z.object({
+    address: z.string().min(1, "Address is required."),
+    zipCode: z.string().optional(),
+    city: z.string().optional(),
+    country: z.string().optional(),
+    userId: z.string().optional(),
+  }),
+}).refine(
+  (data) => data.availableCapacity <= data.capacity,
+  {
+    message: "Available capacity cannot exceed total capacity.",
+    path: ["availableCapacity"],
+  }
+);
+
+type FormData = z.infer<typeof warehouseSchemaValidation>;
+
 interface Props {
   editingData: (warehouseDto & { _id?: string }) | null;
   onClose: () => void;
   onRefresh: () => void;
   themeColor: string;
 }
+
 const WareHousesForm = ({
   editingData,
   onClose,
@@ -30,18 +72,48 @@ const WareHousesForm = ({
     { _id: string; statusName: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<warehouseDto>({
-    wareHouseStatusId: "",
-    openTime: new Date("2000-01-01T09:00:00"),
-    closeTime: new Date("2000-01-01T18:00:00"),
-    capacity: 0,
-    availableCapacity: 0,
-    isActive: true,
-    isDefault: false,
-    person: { firstName: "", middleName: "", lastName: "" },
-    contact: { mobileNumber: "", phoneNumber: "", emailId: "" },
-    address: { address: "", zipCode: "", city: "", country: "", userId: "" },
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(warehouseSchemaValidation),
+    defaultValues: {
+      wareHouseStatusId: "",
+      openTime: "09:00",
+      closeTime: "18:00",
+      capacity: 0,
+      availableCapacity: 0,
+      isActive: true,
+      isDefault: false,
+      person: {
+        firstName: "",
+        middleName: "",
+        lastName: "",
+      },
+      contact: {
+        mobileNumber: "",
+        phoneNumber: "",
+        emailId: "",
+      },
+      address: {
+        address: "",
+        zipCode: "",
+        city: "",
+        country: "",
+        userId: "",
+      },
+    },
   });
+
+  const isDefaultValue = useWatch({ control, name: "isDefault" });
+  const capacityValue = watch("capacity");
+
   useEffect(() => {
     const loadStatuses = async () => {
       try {
@@ -66,7 +138,7 @@ const WareHousesForm = ({
       }
     };
     loadStatuses();
-  }, [editingData]);
+  }, []);
 
   useEffect(() => {
     if (!editingData) return;
@@ -74,15 +146,22 @@ const WareHousesForm = ({
     const addressObj = editingData.address || {};
     const userStr = localStorage.getItem("user");
     const user = userStr ? JSON.parse(userStr) : { id: "" };
-    setFormData({
-      ...editingData,
+    
+    // Format times for time input
+    const formatTimeForInput = (time?: string | Date) => {
+      if (!time) return "09:00";
+      const date = new Date(time);
+      return date.toTimeString().slice(0, 5);
+    };
+
+    reset({
       wareHouseStatusId: editingData.wareHouseStatusId || "",
-      openTime: editingData.openTime
-        ? new Date(editingData.openTime)
-        : new Date("2000-01-01T09:00:00"),
-      closeTime: editingData.closeTime
-        ? new Date(editingData.closeTime)
-        : new Date("2000-01-01T18:00:00"),
+      openTime: formatTimeForInput(editingData.openTime),
+      closeTime: formatTimeForInput(editingData.closeTime),
+      capacity: editingData.capacity || 0,
+      availableCapacity: editingData.availableCapacity || 0,
+      isActive: Boolean(editingData.isActive),
+      isDefault: Boolean(editingData.isDefault),
       person: {
         firstName: editingData.person?.firstName || "",
         middleName: editingData.person?.middleName || "",
@@ -101,37 +180,9 @@ const WareHousesForm = ({
         userId: addressObj.userId || user.id || user._id || "",
       },
     });
-  }, [editingData]);
-  const handleFormChange = <K extends keyof warehouseDto>(
-    field: K,
-    value: warehouseDto[K]
-  ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-  const updateNested = <
-    K extends keyof warehouseDto,
-    J extends keyof warehouseDto[K]
-  >(
-    parent: K,
-    key: J,
-    value: warehouseDto[K][J]
-  ) => {
-    setFormData((prev) => {
-      const parentData = prev[parent];
-      if (parentData && typeof parentData === "object") {
-        return {
-          ...prev,
-          [parent]: {
-            ...parentData,
-            [key]: value,
-          } as warehouseDto[K],
-        };
-      }
-      return prev;
-    });
-  };
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  }, [editingData, reset]);
+
+  const handleSubmitForm = async (values: FormData) => {
     setLoading(true);
     try {
       const userStr = localStorage.getItem("user");
@@ -140,40 +191,34 @@ const WareHousesForm = ({
       const userId = user.id || user._id;
 
       if (!userId) throw new Error("User ID not found");
-      const payload: warehouseDto & { userId: string } = {
+
+      const payload: any = {
         userId: userId,
-        wareHouseStatusId:
-          formData.wareHouseStatusId || warehouseStatuses[0]?._id,
-        openTime: formData.openTime,
-        closeTime: formData.closeTime,
-        capacity: Number(formData.capacity) || 0,
-        availableCapacity: Number(formData.availableCapacity) || 0,
-        isActive: formData.isActive,
-        isDefault: formData.isDefault,
+        wareHouseStatusId: values.wareHouseStatusId,
+        openTime: new Date(`2000-01-01T${values.openTime}:00`),
+        closeTime: new Date(`2000-01-01T${values.closeTime}:00`),
+        capacity: Number(values.capacity),
+        availableCapacity: Number(values.availableCapacity),
+        isActive: values.isActive,
+        isDefault: values.isDefault,
         person: {
-          firstName: (formData.person.firstName || "").trim(),
-          middleName: (formData.person.middleName || "").trim(),
-          lastName: (formData.person.lastName || "").trim(),
+          firstName: values.person.firstName.trim(),
+          middleName: values.person.middleName?.trim() || "",
+          lastName: values.person.lastName.trim(),
         },
         contact: {
-          mobileNumber: formData.contact.mobileNumber || "",
-          phoneNumber: formData.contact.phoneNumber || "",
-          emailId: formData.contact.emailId || "",
+          mobileNumber: values.contact.mobileNumber,
+          phoneNumber: values.contact.phoneNumber || "",
+          emailId: values.contact.emailId,
         },
         address: {
-          address: formData.address.address || "",
-          zipCode: formData.address.zipCode || "",
-          city: formData.address.city || "",
-          country: formData.address.country || "",
+          address: values.address.address.trim(),
+          zipCode: values.address.zipCode || "",
+          city: values.address.city || "",
+          country: values.address.country || "",
           userId: userId,
         },
       };
-
-      if (!payload.person.firstName) throw new Error("First Name is required");
-      if (!payload.contact.mobileNumber)
-        throw new Error("Mobile Number is required");
-      if (!payload.contact.emailId) throw new Error("Email ID is required");
-      if (!payload.address.address) throw new Error("Address is required");
 
       if (editingData?._id) {
         await updateItem("/warehouses", editingData._id, payload);
@@ -200,36 +245,23 @@ const WareHousesForm = ({
       setLoading(false);
     }
   };
-  const formatTime = (date: Date): string => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      return "09:00";
-    }
-    return date.toTimeString().slice(0, 5);
-  };
+
   return (
     <FormModal
       title={editingData ? "Edit Warehouse" : "Add New Warehouse"}
       icon={<WarehouseIcon size={24} />}
       onClose={onClose}
       themeColor={themeColor}
-      width="w-[95vw] max-w-[1000px]"
-      className="min-w-[350px] max-h-[90vh]"
     >
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-6 p-4 max-h-[80vh] overflow-y-auto"
-      >
-        <div className="mb-4">
-          <label className="block font-semibold text-gray-700 mb-2">
-            Warehouse Status *
+      <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-6 p-4">
+        {/* Warehouse Status - Custom styled select matching FormInput style */}
+        <div className="space-y-2">
+          <label className="block font-semibold text-gray-700">
+            Warehouse Status <span className="text-red-500">*</span>
           </label>
           <select
-            className="w-full border border-gray-300 rounded-xl p-2"
-            value={formData.wareHouseStatusId || ""}
-            onChange={(e) =>
-              handleFormChange("wareHouseStatusId", e.target.value)
-            }
-            required
+            className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-300 focus:border-orange-300 outline-none transition-all bg-white"
+            {...register("wareHouseStatusId")}
           >
             <option value="">Select Status</option>
             {warehouseStatuses.map((status) => (
@@ -238,187 +270,168 @@ const WareHousesForm = ({
               </option>
             ))}
           </select>
+          {errors.wareHouseStatusId && (
+            <p className="text-red-500 text-sm">{errors.wareHouseStatusId.message}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormInput
-            label="Open Time *"
+            label="Open Time"
             type="time"
-            value={formatTime(formData.openTime)}
-            onChange={(e) =>
-              handleFormChange(
-                "openTime",
-                new Date(`2000-01-01T${e.target.value}:00`)
-              )
-            }
+            {...register("openTime")}
+            error={errors.openTime?.message}
             required
           />
           <FormInput
-            label="Close Time *"
+            label="Close Time"
             type="time"
-            value={formatTime(formData.closeTime)}
-            onChange={(e) =>
-              handleFormChange(
-                "closeTime",
-                new Date(`2000-01-01T${e.target.value}:00`)
-              )
-            }
+            {...register("closeTime")}
+            error={errors.closeTime?.message}
             required
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormInput
-            label="Total Capacity *"
+            label="Total Capacity"
             type="number"
             min="0"
-            value={formData.capacity || 0}
-            onChange={(e) =>
-              handleFormChange("capacity", Number(e.target.value) || 0)
-            }
+            step="1"
+            {...register("capacity", { valueAsNumber: true })}
+            error={errors.capacity?.message}
             required
           />
           <FormInput
-            label="Available Capacity *"
+            label="Available Capacity"
             type="number"
             min="0"
-            value={formData.availableCapacity || 0}
-            onChange={(e) => {
-              const value = Number(e.target.value) || 0;
-
-              handleFormChange(
-                "availableCapacity",
-                value > formData.capacity ? formData.capacity : value
-              );
-            }}
+            step="1"
+            {...register("availableCapacity", { 
+              valueAsNumber: true,
+              validate: (value) => value <= capacityValue || "Available capacity cannot exceed total capacity"
+            })}
+            error={errors.availableCapacity?.message}
             required
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormInput
-            label="First Name *"
-            value={formData.person.firstName || ""}
-            onChange={(e) =>
-              updateNested("person", "firstName", e.target.value)
-            }
+            label="First Name"
+            {...register("person.firstName")}
+            error={errors.person?.firstName?.message}
             required
           />
           <FormInput
             label="Middle Name"
-            value={formData.person.middleName || ""}
-            onChange={(e) =>
-              updateNested("person", "middleName", e.target.value)
-            }
+            {...register("person.middleName")}
+            error={errors.person?.middleName?.message}
           />
           <FormInput
-            label="Last Name *"
-            value={formData.person.lastName || ""}
-            onChange={(e) => updateNested("person", "lastName", e.target.value)}
+            label="Last Name"
+            {...register("person.lastName")}
+            error={errors.person?.lastName?.message}
             required
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormInput
-            label="Mobile Number *"
-            value={formData.contact.mobileNumber || ""}
-            onChange={(e) => {
-              let value = e.target.value.replace(/[^0-9+]/g, "");
-              if (value.indexOf("+") > 0) {
-                value = value.replace(/\+/g, "");
-              }
-
-              updateNested("contact", "mobileNumber", value);
-            }}
+            label="Mobile Number"
+            {...register("contact.mobileNumber")}
             inputMode="tel"
             placeholder="+923001234567"
+            error={errors.contact?.mobileNumber?.message}
             required
           />
 
           <FormInput
             label="Phone Number"
-            value={formData.contact.phoneNumber || ""}
-            onChange={(e) => {
-              let value = e.target.value.replace(/[^0-9+]/g, "");
-              if (value.indexOf("+") > 0) {
-                value = value.replace(/\+/g, "");
-              }
-              updateNested("contact", "phoneNumber", value);
-            }}
+            {...register("contact.phoneNumber")}
             inputMode="tel"
             placeholder="+922112345678"
+            error={errors.contact?.phoneNumber?.message}
           />
 
           <FormInput
-            label="Email ID *"
+            label="Email ID"
             type="email"
-            value={formData.contact.emailId || ""}
-            onChange={(e) => updateNested("contact", "emailId", e.target.value)}
+            {...register("contact.emailId")}
+            error={errors.contact?.emailId?.message}
             required
           />
         </div>
+
         <FormInput
-          label="Address *"
-          value={formData.address.address || ""}
-          onChange={(e) => updateNested("address", "address", e.target.value)}
+          label="Address"
+          {...register("address.address")}
+          error={errors.address?.address?.message}
           required
         />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormInput
             label="Zip Code"
-            value={formData.address.zipCode || ""}
-            onChange={(e) =>
-              updateNested(
-                "address",
-                "zipCode",
-                e.target.value.replace(/\D/g, "")
-              )
-            }
+            {...register("address.zipCode")}
             inputMode="numeric"
             placeholder="e.g. 54000"
+            error={errors.address?.zipCode?.message}
           />
 
           <FormInput
             label="City"
-            value={formData.address.city || ""}
-            onChange={(e) => updateNested("address", "city", e.target.value)}
+            {...register("address.city")}
+            error={errors.address?.city?.message}
           />
           <FormInput
             label="Country"
-            value={formData.address.country || ""}
-            onChange={(e) => updateNested("address", "country", e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormToggle
-            label="Active"
-            checked={formData.isActive ?? true}
-            onChange={(val) => handleFormChange("isActive", val)}
-            disabled={formData.isDefault}
-          />
-          <FormToggle
-            label="Default"
-            checked={formData.isDefault ?? false}
-            onChange={(val) => handleFormChange("isDefault", val)}
+            {...register("address.country")}
+            error={errors.address?.country?.message}
           />
         </div>
 
-        <button
+        {/* Toggles Section - Using Controller exactly like TaxForm */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+          <Controller
+            control={control}
+            name="isActive"
+            render={({ field }) => (
+              <FormToggle
+                label="Active"
+                checked={field.value}
+                onChange={field.onChange}
+                disabled={isDefaultValue}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="isDefault"
+            render={({ field }) => (
+              <FormToggle
+                label="Default"
+                checked={field.value}
+                onChange={(val) => {
+                  field.onChange(val);
+                  if (val) setValue("isActive", true);
+                }}
+              />
+            )}
+          />
+        </div>
+
+        <FormButton
           type="submit"
-          disabled={loading}
-          className="w-full text-white py-4 rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6 hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: themeColor }}
-        >
-          <Save size={20} />
-          {loading
-            ? "Processing..."
-            : editingData
-            ? "Update Warehouse"
-            : "Save Warehouse"}
-        </button>
+          label={editingData ? "Update Warehouse" : "Create"}
+          icon={<Save size={20} />}
+          loading={loading}
+          themeColor={themeColor}
+          onCancel={onClose}
+        />
       </form>
     </FormModal>
   );
 };
+
 export default WareHousesForm;

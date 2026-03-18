@@ -42,11 +42,15 @@ export const CategoryView: React.FC<Props> = ({
       <div>
         {viewType === "table" ? (
           <CategoryTable
-            data={categories}
-            onAddSub={onSub}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
+  data={categories}
+  onAddSub={onSub}
+  onEdit={onEdit}
+  onDelete={onDelete}
+  loading={loading}             
+  searchTerm=""                 
+  onSearchChange={() => {}}      
+  totalCount={categories.length} 
+/>
         ) : (
           <CategoryTree
             data={categories}
@@ -54,6 +58,10 @@ export const CategoryView: React.FC<Props> = ({
             onSetDefault={onSetDefault}
             onEdit={onEdit}
             onDelete={onDelete}
+            loading={loading}             
+  searchTerm=""                  
+  onSearchChange={() => {}}    
+  totalCount={categories.length}
           />
         )}
       </div>

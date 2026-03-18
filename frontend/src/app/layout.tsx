@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import ThemeProvider from "@/components/theme/ThemeProvider";
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import Modal from "@/components/ui/Modal";
@@ -11,7 +10,7 @@ import { Toaster } from "react-hot-toast";
 
 
 export const metadata: Metadata = {
-  title: "Humber Mobility",
+  title: "Inventory System",
   description: "Technicians and workshops connections",
 };
 
@@ -28,7 +27,7 @@ export default function RootLayout({
           <ModalProvider>
             <Modal />
             <Theme>
-              <ThemeProvider>{children}</ThemeProvider>
+              {children}
             </Theme>
           </ModalProvider>
 

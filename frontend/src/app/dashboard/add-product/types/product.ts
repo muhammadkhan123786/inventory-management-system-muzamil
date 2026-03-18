@@ -1,5 +1,4 @@
-import { sub } from "framer-motion/client";
-
+// ─── Category Types ────────────────────────────────────────────────────────────
 
 export interface DynamicField {
   _id?: string;
@@ -12,25 +11,6 @@ export interface DynamicField {
   attributes?: Record<string, any>;
 }
 
-export interface CategorySelection {
-  level1: string;
-  level2: string;
-  level3: string;
-}
-
-export interface CategoryState {
-  selectedLevel1: string;
-  selectedLevel2: string;
-  selectedLevel3: string;
-  dynamicFields: Record<string, any>;
-  categories: {
-    level1: CategoryNode | null;
-    level2: CategoryNode | null;
-    level3: CategoryNode | null;
-  };
-}
-
-
 export interface CategoryNode {
   _id: string;
   categoryName: string;
@@ -39,16 +19,19 @@ export interface CategoryNode {
   fields?: DynamicField[];
 }
 
-
-
-//  -------------------------------------------------------- //
-
-
-export interface UseProductFormProps {
-  initialData: any;
-  onSubmit: (data: any) => void;
-  categories: CategoryNode[]; // 👈 backend tree
+export interface CategoryStepProps {
+  categories: CategoryNode[];
+  selectedPath: string[];
+  selectedCategories: CategoryNode[];
+  getCategoriesAtLevel: (level: number) => CategoryNode[];
+  handleCategorySelect: (level: number, value: string) => void;
+  attributes?: Record<string, any>;
+  onFullPathSelect?: (pathIds: string[]) => void;
+  attributeCategoryIds?: Set<string>;
+  attributeIdsLoading?: boolean;
 }
+
+// ─── Dropdown Types ────────────────────────────────────────────────────────────
 
 export interface DropdownOption {
   value: string;
@@ -64,6 +47,8 @@ export interface FourDropdownData {
   conditions: DropdownOption[];
 }
 
+// ─── Attribute Types ───────────────────────────────────────────────────────────
+
 export interface Attribute {
   id: string;
   name: string;
@@ -74,97 +59,112 @@ export interface Attribute {
   isForSubcategories: boolean;
 }
 
-
-
-export const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api";
-
-export interface BasicInfoStepProps {
-  formData: {
-    productName: string;
-    sku: string;
-    barcode: string;
-    brand: string;
-    manufacturer: string;
-    modelNumber: string;
-    description: string;
-    shortDescription: string;
-    keywords: string;
-  };
-  tags: string[];
-  images: {
-    file: File;
-    preview: string;
-    name: string;
-  }[];
-  newTag: string;
-  onInputChange: (field: string, value: string) => void;
-  onAddTag: () => void;
-  onRemoveTag: (tag: string) => void;
-  onNewTagChange: (value: string) => void;
-  onImageUpload: (files: File[]) => Promise<void> | void;
-  onRemoveImage: (index: number) => void;
-  isUploading?: boolean;
-  onBulkAddTags: (newTagsArray: string[]) => void;
-  setImage: any;
-}
+// ─── Image Types ───────────────────────────────────────────────────────────────
 
 export interface UploadedImage {
   id: string;
   preview: string;
-  file?: File; // Store the actual file for AI analysis
+  file?: File;
   progress: number;
   isUploading: boolean;
 }
 
+export interface ImageItem {
+  file: File;
+  preview: string;
+  name: string;
+  base64?: string;
+}
+
+// ─── AI Types ─────────────────────────────────────────────────────────────────
+
 export interface AIResponse {
   success: boolean;
   imageCount: number;
+  imageUrls: string[];
   ai: {
     shortDescription: string;
     description: string;
-    tags: string[];
+    /** Comma-separated string – same format as keywords */
+    tags: string;
     keywords: string;
   };
 }
 
+// ─── Form Data ─────────────────────────────────────────────────────────────────
 
-export interface CategoryStepProps {
-  categories: CategoryNode[];
-  selectedPath: string[];
-  selectedCategories: CategoryNode[];
-  getCategoriesAtLevel: (level: number) => CategoryNode[];
-  handleCategorySelect: (level: number, value: string) => void;
-  attributes?: Record<string, any>;
-
+/**
+ * Both `keywords` and `tags` are stored as comma-separated strings.
+ * They are only split into arrays at display/submit time.
+ */
+export interface ProductFormData {
+  productName: string;
+  sku: string;
+  barcode: string;
+  brand: string;
+  manufacturer: string;
+  modelNumber: string;
+  description: string;
+  shortDescription: string;
+  /** Comma-separated: "travel, scooter, mobility" */
+  keywords: string;
+  /** Comma-separated: "sale, featured, new" */
+  tags: string;
+  images: string[];
+  variants: any[];
 }
 
-/* 🎨 Level-based styling (same as static UI) */
+// ─── Step Props ────────────────────────────────────────────────────────────────
+
+/**
+ * Tags are now stored/handled identically to keywords (comma-separated string).
+ * No external tag state — the card manages its own input internally.
+ */
+export interface BasicInfoStepProps {
+  formData: ProductFormData;
+  images: ImageItem[];
+  onInputChange: (field: string, value: string) => void;
+  onImageUpload: (files: FileList | File[]) => Promise<void> | void;
+  onRemoveImage: (index: number) => void;
+  setImage: (urls: string[]) => void;
+}
+
+// ─── Hook Props ────────────────────────────────────────────────────────────────
+
+export interface UseProductFormProps {
+  initialData: ProductFormData;
+  onSubmit: (data: any) => void;
+  categories: CategoryNode[];
+}
+
+// ─── Level Styles ──────────────────────────────────────────────────────────────
+
 export const LEVEL_STYLES = [
   {
     badge: "bg-purple-500 text-white",
     border: "border-purple-300",
     focus: "focus:border-purple-500 focus:ring-purple-200",
     label: "Main Category",
-    subCat: "bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1.5 text-sm"
+    subCat:
+      "bg-purple-100 text-purple-700 border border-purple-300 px-3 py-1.5 text-sm",
   },
   {
     badge: "bg-cyan-500 text-white",
     border: "border-cyan-300",
     focus: "focus:border-cyan-500 focus:ring-cyan-200",
     label: "Subcategory",
-    subCat: "bg-cyan-200 text-cyan-700 border border-cyan-300 px-3 py-1.5 text-sm"
+    subCat:
+      "bg-cyan-200 text-cyan-700 border border-cyan-300 px-3 py-1.5 text-sm",
   },
   {
     badge: "bg-teal-500 text-white",
     border: "border-teal-300",
     focus: "focus:border-teal-500 focus:ring-teal-200",
     label: "Sub-subcategory",
-    subCat: "bg-teal-100 text-teal-700 border border-teal-300 px-3 py-1.5 text-sm"
+    subCat:
+      "bg-teal-100 text-teal-700 border border-teal-300 px-3 py-1.5 text-sm",
   },
-];
+] as const;
 
-
-
-
-
+export const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4000/api";

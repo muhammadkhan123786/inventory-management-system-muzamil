@@ -97,7 +97,7 @@ const ImageUploadSection = ({
                 Browse Files
               </button>
               
-              {uploadedImages.length > 0 && !isAnalyzing && (
+              {/* {uploadedImages.length > 0 && !isAnalyzing && (
                 <button
                   type="button"
                   onClick={() => document.getElementById('ai-generate-btn')?.click()}
@@ -106,7 +106,7 @@ const ImageUploadSection = ({
                   <Sparkles className="h-5 w-5" />
                   Generate with AI
                 </button>
-              )}
+              )} */}
             </div>
 
             <p className="text-xs text-gray-500">

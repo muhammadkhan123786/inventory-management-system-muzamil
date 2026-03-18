@@ -97,7 +97,7 @@ app.use(
 
 // Muzamil Hassan routes
 app.use(`${process.env.API_PREFIX}/products`, adminProtecter, productRoutes);
-app.use(`${process.env.API_PREFIX}/ai`, adminProtecter, aiRoutes);
+app.use(`${process.env.API_PREFIX}/ai`,  aiRoutes);
 app.use(`${process.env.API_PREFIX}/purchase-orders`, adminProtecter, purchaseOrderRoutes);
 app.use(`${process.env.API_PREFIX}/grn`, adminProtecter, grnRoutes);
 app.use(`${process.env.API_PREFIX}/goods-return-notice`, adminProtecter, goodsReturnRoutes);

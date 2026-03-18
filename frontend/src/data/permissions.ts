@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   PackageX,
   PackageCheck,
-  BarChart3,
   Store,
   Database,
   Wallet,
@@ -23,8 +22,7 @@ import {
   Tags,
   Scale,
   Warehouse,
-  Palette,
-  Maximize,
+   Maximize,
   Settings,
   
   Briefcase,
@@ -38,13 +36,13 @@ import {
 import { INavBarLinkSharedInterface } from "@common/INavBarLinkSharedInterface";
 
 export const navigation: INavBarLinkSharedInterface[] = [
-  {
-    _id: nanoid(),
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    roleId: [1, 2],
-  },
+  // {
+  //   _id: nanoid(),
+  //   label: "Dashboard",
+  //   href: "/dashboard",
+  //   icon: LayoutDashboard,
+  //   roleId: [1, 2],
+  // },
 
  
 
