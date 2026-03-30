@@ -234,7 +234,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId, currencyS
                   {/* Cost Price - col-span-2 */}
                   <div className="col-span-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-gray-900">${currencySymbol}{row.costPrice.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">{currencySymbol}{row.costPrice.toFixed(2)}</span>
                       {row.lastChange && <DirIcon dir={row.lastChange.direction} />}
                     </div>
                     {row.lastChange?.changedAt && (
@@ -250,7 +250,7 @@ export function SupplierPricingTab({ supplierId, supplierName, userId, currencyS
 
                   {/* Selling Price - col-span-1 */}
                   <div className="col-span-1">
-                    <span className="text-sm text-gray-600">${currencySymbol}{row.sellingPrice.toFixed(2)}</span>
+                    <span className="text-sm text-gray-600">{currencySymbol}{row.sellingPrice.toFixed(2)}</span>
                   </div>
 
                   {/* Margin - col-span-1 */}
