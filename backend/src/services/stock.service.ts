@@ -1432,28 +1432,28 @@ export async function applyGRNToStock(grnId: string): Promise<StockResult> {
 // ─────────────────────────────────────────────────────────────────────────────
 // PUBLIC: Goods Return se stock kam karo
 // ─────────────────────────────────────────────────────────────────────────────
-export async function applyReturnToStock(returnId: string): Promise<StockResult> {
-  try {
-    const goodsReturn = await GoodsReturn.findById(returnId).lean() as any;
-    if (!goodsReturn) throw new Error(`GoodsReturn not found: ${returnId}`);
+// export async function applyReturnToStock(returnId: string): Promise<StockResult> {
+//   try {
+//     const goodsReturn = await GoodsReturn.findById(returnId).lean() as any;
+//     if (!goodsReturn) throw new Error(`GoodsReturn not found: ${returnId}`);
 
-    const deltas: StockDelta[] = (goodsReturn.items ?? [])
-      .filter((item: any) => item.returnQty > 0 && item.productId && item.sku)
-      .map((item: any) => ({
-        productId: String(item.productId),
-        sku:       item.sku,
-        delta:     -item.returnQty,
-        reason:    `Return ${goodsReturn.grtnNumber}`,
-      }));
+//     const deltas: StockDelta[] = (goodsReturn.items ?? [])
+//       .filter((item: any) => item.returnQty > 0 && item.productId && item.sku)
+//       .map((item: any) => ({
+//         productId: String(item.productId),
+//         sku:       item.sku,
+//         delta:     -item.returnQty,
+//         reason:    `Return ${goodsReturn.grtnNumber}`,
+//       }));
 
-    if (deltas.length === 0) {
-      console.warn(`[Stock] ⚠️ No traceable items in return ${goodsReturn.grtnNumber}`);
-      return { success: true, updated: [], skipped: [], errors: [] };
-    }
+//     if (deltas.length === 0) {
+//       console.warn(`[Stock] ⚠️ No traceable items in return ${goodsReturn.grtnNumber}`);
+//       return { success: true, updated: [], skipped: [], errors: [] };
+//     }
 
-    return await applyStockDeltas(deltas);
-  } catch (err: any) {
-    console.error("[Stock] applyReturnToStock failed:", err.message);
-    return { success: false, updated: [], skipped: [], errors: [err.message] };
-  }
-}
+//     return await applyStockDeltas(deltas);
+//   } catch (err: any) {
+//     console.error("[Stock] applyReturnToStock failed:", err.message);
+//     return { success: false, updated: [], skipped: [], errors: [err.message] };
+//   }
+// }

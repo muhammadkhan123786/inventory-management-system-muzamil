@@ -39,6 +39,7 @@ export default function GoodsReturnPage() {
     handleCreateReturn, resetForm,
   } = useGoodsReturn();
 
+  console.log("returningItems", returningItems)
   const handleOpenCreate = () => { resetForm(); setIsCreateDialogOpen(true); };
   const handleOpenView   = (grtn: GoodsReturnNote) => {
     setViewingReturn(grtn);

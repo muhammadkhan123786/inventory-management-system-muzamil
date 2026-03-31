@@ -375,7 +375,7 @@
 import { Request, Response }   from "express";
 import { GoodsReturn }         from "../models/goodsReturn.model";
 import { PurchaseOrder }       from "../models/purchaseOrder.model";
-import { applyReturnToStock }  from "../services/stock.service";
+// import { applyReturnToStock }  from "../services/stock.service";
 import { emailService }        from "../services/email.service";
 import { createCreditEntry }   from "../services/ledger.service"; // ✅ ADD THIS LINE
 
@@ -438,64 +438,64 @@ export const updateGoodsReturnStatus = async (req: Request, res: Response) => {
     // ════════════════════════════════════════════════════════════════════
     // STATUS: "completed" — Step 3 (Ledger CREDIT) ADDED
     // ════════════════════════════════════════════════════════════════════
-    if (status === "completed") {
+    // if (status === "completed") {
 
-      // ── 1. Stock decrease — UNCHANGED ───────────────────────────────
-      applyReturnToStock(String(goodsReturn._id))
-        .then(result => {
-          if (result.success) {
-            console.log(`[GoodsReturn] ✅ Stock reversed for ${grtnNumber} | SKUs: [${result.updated.join(", ")}]`);
-          } else {
-            console.error(`[GoodsReturn] ❌ Partial stock failure for ${grtnNumber}:`, result.errors);
-          }
-        })
-        .catch(err => console.error(`[GoodsReturn] ❌ Stock reversal error:`, err.message));
+    //   // ── 1. Stock decrease — UNCHANGED ───────────────────────────────
+    //   applyReturnToStock(String(goodsReturn._id))
+    //     .then(result => {
+    //       if (result.success) {
+    //         console.log(`[GoodsReturn] ✅ Stock reversed for ${grtnNumber} | SKUs: [${result.updated.join(", ")}]`);
+    //       } else {
+    //         console.error(`[GoodsReturn] ❌ Partial stock failure for ${grtnNumber}:`, result.errors);
+    //       }
+    //     })
+    //     .catch(err => console.error(`[GoodsReturn] ❌ Stock reversal error:`, err.message));
 
-      // ── 2. Email supplier — UNCHANGED ────────────────────────────────
-      sendReturnCompletedEmail(goodsReturn).catch(err =>
-        console.error(`[GoodsReturn] ⚠️ Supplier email failed:`, err.message)
-      );
+    //   // ── 2. Email supplier — UNCHANGED ────────────────────────────────
+    //   sendReturnCompletedEmail(goodsReturn).catch(err =>
+    //     console.error(`[GoodsReturn] ⚠️ Supplier email failed:`, err.message)
+    //   );
 
-      // ── 3. ✅ NEW — Ledger CREDIT ──────────────────────────────────────
-      // GRTN complete → supplier ne return receive kiya → outstanding ghata → CREDIT
-      // try/catch ensures ledger failure never blocks the status update
-      try {
-        const grn = (goodsReturn as any).grnId as any;
-        const po  = grn?.purchaseOrderId as any;
+    //   // ── 3. ✅ NEW — Ledger CREDIT ──────────────────────────────────────
+    //   // GRTN complete → supplier ne return receive kiya → outstanding ghata → CREDIT
+    //   // try/catch ensures ledger failure never blocks the status update
+    //   try {
+    //     const grn = (goodsReturn as any).grnId as any;
+    //     const po  = grn?.purchaseOrderId as any;
 
-        // supplierId: GRTN → GRN (populated) → PO (populated) → supplier._id
-        const supplierId = po?.supplier?._id || po?.supplier;
+    //     // supplierId: GRTN → GRN (populated) → PO (populated) → supplier._id
+    //     const supplierId = po?.supplier?._id || po?.supplier;
 
-        const totalAmount =
-          (goodsReturn as any).totalAmount ||
-          goodsReturn.items.reduce((sum: number, item: any) =>
-            sum + (item.returnQty || item.returnQuantity || 0) * (item.unitPrice || 0), 0
-          );
+    //     const totalAmount =
+    //       (goodsReturn as any).totalAmount ||
+    //       goodsReturn.items.reduce((sum: number, item: any) =>
+    //         sum + (item.returnQty || item.returnQuantity || 0) * (item.unitPrice || 0), 0
+    //       );
 
-        if (supplierId && totalAmount > 0) {
-          await createCreditEntry({
-            supplierId:      String(supplierId),
-            amount:          totalAmount,
-            referenceType:   "GRTN",
-            referenceId:     goodsReturn._id as any,
-            referenceNumber: grtnNumber,
-            notes:           `Return completed: ${grtnNumber}`,
-            createdBy:       (req as any).user?.name || "system",
-          });
+    //     if (supplierId && totalAmount > 0) {
+    //       await createCreditEntry({
+    //         supplierId:      String(supplierId),
+    //         amount:          totalAmount,
+    //         referenceType:   "GRTN",
+    //         referenceId:     goodsReturn._id as any,
+    //         referenceNumber: grtnNumber,
+    //         notes:           `Return completed: ${grtnNumber}`,
+    //         createdBy:       (req as any).user?.name || "system",
+    //       });
 
-          console.log(
-            `[GoodsReturn] 💰 Ledger CREDIT | GRTN: ${grtnNumber} | £${totalAmount} | Supplier: ${supplierId}`
-          );
-        } else {
-          console.warn(
-            `[GoodsReturn] ⚠️ Ledger CREDIT skipped — supplierId: ${supplierId}, totalAmount: ${totalAmount}`
-          );
-        }
-      } catch (ledgerErr: any) {
-        console.error(`[GoodsReturn] ❌ Ledger CREDIT failed for ${grtnNumber}:`, ledgerErr.message);
-      }
-      // ── END STEP 3 ────────────────────────────────────────────────────
-    }
+    //       console.log(
+    //         `[GoodsReturn] 💰 Ledger CREDIT | GRTN: ${grtnNumber} | £${totalAmount} | Supplier: ${supplierId}`
+    //       );
+    //     } else {
+    //       console.warn(
+    //         `[GoodsReturn] ⚠️ Ledger CREDIT skipped — supplierId: ${supplierId}, totalAmount: ${totalAmount}`
+    //       );
+    //     }
+    //   } catch (ledgerErr: any) {
+    //     console.error(`[GoodsReturn] ❌ Ledger CREDIT failed for ${grtnNumber}:`, ledgerErr.message);
+    //   }
+    //   // ── END STEP 3 ────────────────────────────────────────────────────
+    // }
 
     // ════════════════════════════════════════════════════════════════════
     // STATUS: "rejected" — UNCHANGED
