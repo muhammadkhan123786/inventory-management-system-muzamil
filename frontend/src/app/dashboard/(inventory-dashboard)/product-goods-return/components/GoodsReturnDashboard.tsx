@@ -90,6 +90,8 @@ export default function GoodsReturnPage() {
           returns={filteredReturns}
           onView={handleOpenView}
           onDownload={handleExportReturn}
+          onStatusUpdate={handleStatusUpdate}
+          isUpdatingStatus={isUpdatingStatus}
         />
       )}
 

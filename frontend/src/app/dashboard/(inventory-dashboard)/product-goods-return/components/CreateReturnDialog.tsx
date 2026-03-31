@@ -160,7 +160,7 @@ export const CreateReturnDialog: React.FC<CreateReturnDialogProps> = ({
                 <div>
                   <p className="text-sm font-medium text-amber-800">No returnable GRNs available</p>
                   <p className="text-xs text-amber-600 mt-1">
-                    GRNs appear here only when status is "received" and items were marked
+                    GRNs appear here only when status is &quot;received&quot; and items were marked
                     as rejected or damaged during quality inspection.
                   </p>
                 </div>
