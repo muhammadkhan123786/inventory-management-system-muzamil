@@ -252,6 +252,7 @@ const WareHousesForm = ({
       icon={<WarehouseIcon size={24} />}
       onClose={onClose}
       themeColor={themeColor}
+      width="max-w-4xl"
     >
       <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-6 p-4">
         {/* Warehouse Status - Custom styled select matching FormInput style */}
