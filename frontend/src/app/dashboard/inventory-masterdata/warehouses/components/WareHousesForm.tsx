@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Save, Warehouse as WarehouseIcon } from "lucide-react";
 import { FormModal } from "@/app/common-form/FormModal";
 import { FormInput } from "@/app/common-form/FormInput";
@@ -18,8 +18,9 @@ import axios from "axios";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+// ── same hook you already use in Register ─────────────────────────────────
+import useGoogleMapLoad from "@/hooks/useGoogleMapLoad";
 
-// Create Zod validation schema matching TaxForm pattern
 const warehouseSchemaValidation = z.object({
   wareHouseStatusId: z.string().min(1, "Warehouse status is required."),
   openTime: z.string().min(1, "Open time is required."),
@@ -62,16 +63,16 @@ interface Props {
   themeColor: string;
 }
 
-const WareHousesForm = ({
-  editingData,
-  onClose,
-  onRefresh,
-  themeColor,
-}: Props) => {
+const WareHousesForm = ({ editingData, onClose, onRefresh, themeColor }: Props) => {
   const [warehouseStatuses, setWarehouseStatuses] = useState<
     { _id: string; statusName: string }[]
   >([]);
   const [loading, setLoading] = useState(false);
+
+  // ── Google Maps Autocomplete ───────────────────────────────────────────
+  const googleMapLoader = useGoogleMapLoad();
+  // We need a ref to the input so we can attach Autocomplete after render
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     register,
@@ -91,29 +92,56 @@ const WareHousesForm = ({
       availableCapacity: 0,
       isActive: true,
       isDefault: false,
-      person: {
-        firstName: "",
-        middleName: "",
-        lastName: "",
-      },
-      contact: {
-        mobileNumber: "",
-        phoneNumber: "",
-        emailId: "",
-      },
-      address: {
-        address: "",
-        zipCode: "",
-        city: "",
-        country: "",
-        userId: "",
-      },
+      person:  { firstName: "", middleName: "", lastName: "" },
+      contact: { mobileNumber: "", phoneNumber: "", emailId: "" },
+      address: { address: "", zipCode: "", city: "", country: "", userId: "" },
     },
   });
 
   const isDefaultValue = useWatch({ control, name: "isDefault" });
-  const capacityValue = watch("capacity");
+  const capacityValue  = watch("capacity");
 
+  // ── Attach Google Autocomplete once the map API is ready ──────────────
+  useEffect(() => {
+    // Wait for the hook to signal the API is loaded AND the input to exist
+    if (!googleMapLoader) return;
+    if (!window.google)   return;
+
+    const input = addressInputRef.current;
+    if (!input) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+      // request full address details in one call
+      fields: ["formatted_address", "address_components", "geometry"],
+    });
+
+    const listener = autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry) return;  // user typed but didn't pick a suggestion
+
+      // ── Parse the returned components ───────────────────────────────
+      const get = (type: string) =>
+        place.address_components?.find(c => c.types.includes(type))?.long_name ?? "";
+
+      const fullAddress = place.formatted_address ?? "";
+      const zipCode     = get("postal_code");
+      const city        = get("locality") || get("administrative_area_level_2");
+      const country     = get("country");
+
+      // ── Push values into React Hook Form ────────────────────────────
+      setValue("address.address", fullAddress, { shouldValidate: true });
+      setValue("address.zipCode",  zipCode,     { shouldValidate: true });
+      setValue("address.city",     city,        { shouldValidate: true });
+      setValue("address.country",  country,     { shouldValidate: true });
+    });
+
+    return () => {
+      // cleanup Google listener when the component unmounts or effect re-runs
+      google.maps.event.removeListener(listener);
+    };
+  }, [googleMapLoader, setValue]);
+
+  // ── Load warehouse statuses ───────────────────────────────────────────
   useEffect(() => {
     const loadStatuses = async () => {
       try {
@@ -121,17 +149,11 @@ const WareHousesForm = ({
           await getAll<IWarehouseStatus>("/warehouse-status");
         const mapped = res.data
           .filter((ws): ws is IWarehouseStatus & { _id: string } => !!ws._id)
-          .map((ws) => ({
-            _id: ws._id,
-            statusName: ws.wareHouseStatus || "Unknown",
-          }));
+          .map((ws) => ({ _id: ws._id, statusName: ws.wareHouseStatus || "Unknown" }));
         setWarehouseStatuses(mapped);
       } catch (error: unknown) {
         if (axios.isAxiosError<ApiErrorResponse>(error)) {
-          console.error(
-            "Error fetching warehouse statuses:",
-            error.response?.data?.message || error.message
-          );
+          console.error("Error fetching warehouse statuses:", error.response?.data?.message || error.message);
         } else {
           console.error("Unexpected error:", error);
         }
@@ -140,14 +162,14 @@ const WareHousesForm = ({
     loadStatuses();
   }, []);
 
+  // ── Populate form when editing ────────────────────────────────────────
   useEffect(() => {
     if (!editingData) return;
 
     const addressObj = editingData.address || {};
-    const userStr = localStorage.getItem("user");
-    const user = userStr ? JSON.parse(userStr) : { id: "" };
-    
-    // Format times for time input
+    const userStr    = localStorage.getItem("user");
+    const user       = userStr ? JSON.parse(userStr) : { id: "" };
+
     const formatTimeForInput = (time?: string | Date) => {
       if (!time) return "09:00";
       const date = new Date(time);
@@ -156,67 +178,67 @@ const WareHousesForm = ({
 
     reset({
       wareHouseStatusId: editingData.wareHouseStatusId || "",
-      openTime: formatTimeForInput(editingData.openTime),
-      closeTime: formatTimeForInput(editingData.closeTime),
-      capacity: editingData.capacity || 0,
+      openTime:          formatTimeForInput(editingData.openTime),
+      closeTime:         formatTimeForInput(editingData.closeTime),
+      capacity:          editingData.capacity || 0,
       availableCapacity: editingData.availableCapacity || 0,
-      isActive: Boolean(editingData.isActive),
-      isDefault: Boolean(editingData.isDefault),
+      isActive:          Boolean(editingData.isActive),
+      isDefault:         Boolean(editingData.isDefault),
       person: {
-        firstName: editingData.person?.firstName || "",
+        firstName:  editingData.person?.firstName  || "",
         middleName: editingData.person?.middleName || "",
-        lastName: editingData.person?.lastName || "",
+        lastName:   editingData.person?.lastName   || "",
       },
       contact: {
         mobileNumber: editingData.contact?.mobileNumber || "",
-        phoneNumber: editingData.contact?.phoneNumber || "",
-        emailId: editingData.contact?.emailId || "",
+        phoneNumber:  editingData.contact?.phoneNumber  || "",
+        emailId:      editingData.contact?.emailId      || "",
       },
       address: {
         address: addressObj.address || "",
         zipCode: addressObj.zipCode || "",
-        city: addressObj.city || "",
+        city:    addressObj.city    || "",
         country: addressObj.country || "",
-        userId: addressObj.userId || user.id || user._id || "",
+        userId:  addressObj.userId  || user.id || user._id || "",
       },
     });
   }, [editingData, reset]);
 
+  // ── Submit ────────────────────────────────────────────────────────────
   const handleSubmitForm = async (values: FormData) => {
     setLoading(true);
     try {
       const userStr = localStorage.getItem("user");
       if (!userStr) throw new Error("User not found in localStorage");
-      const user = JSON.parse(userStr);
+      const user   = JSON.parse(userStr);
       const userId = user.id || user._id;
-
-      if (!userId) throw new Error("User ID not found");
+      if (!userId)  throw new Error("User ID not found");
 
       const payload: any = {
-        userId: userId,
+        userId,
         wareHouseStatusId: values.wareHouseStatusId,
-        openTime: new Date(`2000-01-01T${values.openTime}:00`),
-        closeTime: new Date(`2000-01-01T${values.closeTime}:00`),
-        capacity: Number(values.capacity),
+        openTime:          new Date(`2000-01-01T${values.openTime}:00`),
+        closeTime:         new Date(`2000-01-01T${values.closeTime}:00`),
+        capacity:          Number(values.capacity),
         availableCapacity: Number(values.availableCapacity),
-        isActive: values.isActive,
-        isDefault: values.isDefault,
+        isActive:          values.isActive,
+        isDefault:         values.isDefault,
         person: {
-          firstName: values.person.firstName.trim(),
+          firstName:  values.person.firstName.trim(),
           middleName: values.person.middleName?.trim() || "",
-          lastName: values.person.lastName.trim(),
+          lastName:   values.person.lastName.trim(),
         },
         contact: {
           mobileNumber: values.contact.mobileNumber,
-          phoneNumber: values.contact.phoneNumber || "",
-          emailId: values.contact.emailId,
+          phoneNumber:  values.contact.phoneNumber || "",
+          emailId:      values.contact.emailId,
         },
         address: {
           address: values.address.address.trim(),
           zipCode: values.address.zipCode || "",
-          city: values.address.city || "",
+          city:    values.address.city    || "",
           country: values.address.country || "",
-          userId: userId,
+          userId,
         },
       };
 
@@ -231,20 +253,18 @@ const WareHousesForm = ({
     } catch (error: unknown) {
       console.error("Submit error:", error);
       if (axios.isAxiosError(error)) {
-        alert(
-          `Server Error: ${error.response?.data?.message || error.message}`
-        );
+        alert(`Server Error: ${error.response?.data?.message || error.message}`);
       } else {
-        alert(
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred"
-        );
+        alert(error instanceof Error ? error.message : "An unexpected error occurred");
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // ── Merge RHF register ref with our addressInputRef ───────────────────
+  // register() returns its own ref callback; we need both refs on the input.
+  const { ref: rhfAddressRef, ...addressRegisterRest } = register("address.address");
 
   return (
     <FormModal
@@ -252,9 +272,11 @@ const WareHousesForm = ({
       icon={<WarehouseIcon size={24} />}
       onClose={onClose}
       themeColor={themeColor}
+      width="max-w-4xl"
     >
       <form onSubmit={handleSubmit(handleSubmitForm)} className="space-y-6 p-4">
-        {/* Warehouse Status - Custom styled select matching FormInput style */}
+
+        {/* Warehouse Status */}
         <div className="space-y-2">
           <label className="block font-semibold text-gray-700">
             Warehouse Status <span className="text-red-500">*</span>
@@ -276,133 +298,102 @@ const WareHousesForm = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormInput
-            label="Open Time"
-            type="time"
-            {...register("openTime")}
-            error={errors.openTime?.message}
-            required
-          />
-          <FormInput
-            label="Close Time"
-            type="time"
-            {...register("closeTime")}
-            error={errors.closeTime?.message}
-            required
-          />
+          <FormInput label="Open Time"  type="time" {...register("openTime")}  error={errors.openTime?.message}  required />
+          <FormInput label="Close Time" type="time" {...register("closeTime")} error={errors.closeTime?.message} required />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormInput
-            label="Total Capacity"
-            type="number"
-            min="0"
-            step="1"
+            label="Total Capacity" type="number" min="0" step="1"
             {...register("capacity", { valueAsNumber: true })}
-            error={errors.capacity?.message}
-            required
+            error={errors.capacity?.message} required
           />
           <FormInput
-            label="Available Capacity"
-            type="number"
-            min="0"
-            step="1"
-            {...register("availableCapacity", { 
+            label="Available Capacity" type="number" min="0" step="1"
+            {...register("availableCapacity", {
               valueAsNumber: true,
-              validate: (value) => value <= capacityValue || "Available capacity cannot exceed total capacity"
+              validate: (value) =>
+                value <= capacityValue || "Available capacity cannot exceed total capacity",
             })}
-            error={errors.availableCapacity?.message}
-            required
+            error={errors.availableCapacity?.message} required
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormInput
-            label="First Name"
-            {...register("person.firstName")}
-            error={errors.person?.firstName?.message}
-            required
-          />
-          <FormInput
-            label="Middle Name"
-            {...register("person.middleName")}
-            error={errors.person?.middleName?.message}
-          />
-          <FormInput
-            label="Last Name"
-            {...register("person.lastName")}
-            error={errors.person?.lastName?.message}
-            required
-          />
+          <FormInput label="First Name"  {...register("person.firstName")}  error={errors.person?.firstName?.message}  required />
+          <FormInput label="Middle Name" {...register("person.middleName")} error={errors.person?.middleName?.message} />
+          <FormInput label="Last Name"   {...register("person.lastName")}   error={errors.person?.lastName?.message}   required />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormInput
-            label="Mobile Number"
-            {...register("contact.mobileNumber")}
-            inputMode="tel"
-            placeholder="+923001234567"
-            error={errors.contact?.mobileNumber?.message}
-            required
-          />
-
-          <FormInput
-            label="Phone Number"
-            {...register("contact.phoneNumber")}
-            inputMode="tel"
-            placeholder="+922112345678"
-            error={errors.contact?.phoneNumber?.message}
-          />
-
-          <FormInput
-            label="Email ID"
-            type="email"
-            {...register("contact.emailId")}
-            error={errors.contact?.emailId?.message}
-            required
-          />
+          <FormInput label="Mobile Number" {...register("contact.mobileNumber")} inputMode="tel" placeholder="+923001234567" error={errors.contact?.mobileNumber?.message} required />
+          <FormInput label="Phone Number"  {...register("contact.phoneNumber")}  inputMode="tel" placeholder="+922112345678" error={errors.contact?.phoneNumber?.message}  />
+          <FormInput label="Email ID" type="email" {...register("contact.emailId")} error={errors.contact?.emailId?.message} required />
         </div>
 
-        <FormInput
-          label="Address"
-          {...register("address.address")}
-          error={errors.address?.address?.message}
-          required
-        />
+        {/* ── Address with Google Autocomplete ───────────────────────────── */}
+        <div className="space-y-2">
+          <label className="block font-semibold text-gray-700">
+            Address <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Start typing your address..."
+            className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-300 focus:border-orange-300 outline-none transition-all bg-white"
+            // merge RHF ref + our autocomplete ref
+            {...addressRegisterRest}
+            ref={(el) => {
+              rhfAddressRef(el);         // give RHF its ref
+              addressInputRef.current = el; // keep ours for Autocomplete init
+            }}
+          />
+          {errors.address?.address && (
+            <p className="text-red-500 text-sm">{errors.address.address.message}</p>
+          )}
+          {!googleMapLoader && (
+            <p className="text-xs text-amber-500">⏳ Loading Google Maps…</p>
+          )}
+        </div>
 
+        {/* ── Auto-filled read-only fields ──────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormInput
-            label="Zip Code"
-            {...register("address.zipCode")}
-            inputMode="numeric"
-            placeholder="e.g. 54000"
-            error={errors.address?.zipCode?.message}
-          />
-
-          <FormInput
-            label="City"
-            {...register("address.city")}
-            error={errors.address?.city?.message}
-          />
-          <FormInput
-            label="Country"
-            {...register("address.country")}
-            error={errors.address?.country?.message}
-          />
+          <div className="space-y-1">
+            <FormInput
+              label="Zip Code"
+              {...register("address.zipCode")}
+              inputMode="numeric"
+              placeholder="Auto-filled from address"
+              error={errors.address?.zipCode?.message}
+              readOnly
+            />
+          </div>
+          <div className="space-y-1">
+            <FormInput
+              label="City"
+              {...register("address.city")}
+              placeholder="Auto-filled from address"
+              error={errors.address?.city?.message}
+              readOnly
+            />
+          </div>
+          <div className="space-y-1">
+            <FormInput
+              label="Country"
+              {...register("address.country")}
+              placeholder="Auto-filled from address"
+              error={errors.address?.country?.message}
+              readOnly
+            />
+          </div>
         </div>
 
-        {/* Toggles Section - Using Controller exactly like TaxForm */}
+        {/* Toggles */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
           <Controller
             control={control}
             name="isActive"
             render={({ field }) => (
-              <FormToggle
-                label="Active"
-                checked={field.value}
-                onChange={field.onChange}
-                disabled={isDefaultValue}
-              />
+              <FormToggle label="Active" checked={field.value} onChange={field.onChange} disabled={isDefaultValue} />
             )}
           />
           <Controller

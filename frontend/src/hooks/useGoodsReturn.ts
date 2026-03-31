@@ -26,11 +26,9 @@ interface UseGoodsReturnOptions {
   supplierId?: string;
 }
 
-// ── Normalize status — never returns undefined ────────────────────────────
 const normalizeStatus = (status: any): ReturnStatus =>
   (status as ReturnStatus) || "pending";
 
-// ── Compute stats from full data array ───────────────────────────────────
 const computeStats = (data: any[]): ReturnStats => ({
   totalReturns: data.length,
   completed: data.filter(r => normalizeStatus(r.status) === "completed").length,
@@ -50,14 +48,12 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
   const { supplierId } = options;
   const isSupplierMode = Boolean(supplierId);
 
-  // ── Core data ──────────────────────────────────────────────────────────
   const [goodsReturnNotes, setGoodsReturnNotes] = useState<GoodsReturnNote[]>([]);
   const [availableGRNs,    setAvailableGRNs]    = useState<GRNForReturn[]>([]);
   const [serverStats,      setServerStats]      = useState<ReturnStats>({
     totalReturns: 0, pending: 0, completed: 0, rejected: 0, totalValue: 0,
   });
 
-  // ── UI ─────────────────────────────────────────────────────────────────
   const [selectedStatus,   setSelectedStatus]   = useState("");
   const [viewMode,         setViewMode]         = useState<"grid" | "table">("grid");
   const [page,             setPage]             = useState(1);
@@ -67,17 +63,14 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
   const [isExporting,      setIsExporting]      = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
 
-  // ── Search — raw input + debounced term ───────────────────────────────
-  const [searchInput, setSearchInput] = useState(""); // bound to <input> directly
-  const [searchTerm,  setSearchTerm]  = useState(""); // debounced — triggers fetch
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm,  setSearchTerm]  = useState("");
 
-  // Debounce 400ms — keystrokes don't fire a fetch until user stops typing
   useEffect(() => {
     const t = setTimeout(() => setSearchTerm(searchInput), 400);
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // ── Form state ─────────────────────────────────────────────────────────
   const [selectedGRN,    setSelectedGRN]    = useState("");
   const [returnedBy,     setReturnedBy]     = useState("");
   const [returnReason,   setReturnReason]   = useState("");
@@ -85,19 +78,12 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
   const [returnDate,     setReturnDate]     = useState(new Date().toISOString().split("T")[0]);
   const [returningItems, setReturningItems] = useState<ReturningItem[]>([]);
 
-  // ── GENERATION COUNTER — the real fix for the disappearing data ────────
-  // Every fetch call gets a unique generation number.
-  // When the fetch completes, it checks if it's still the LATEST one.
-  // If a newer fetch started while this one was in-flight → result discarded.
-  // This means: typing in form → triggers search → old search result comes back
-  // late → gets DISCARDED → table never gets set to empty. ✅
   const fetchGenRef = useRef(0);
 
   // ── Load Returns ───────────────────────────────────────────────────────
   const loadGoodsReturns = useCallback(async () => {
-    const myGen = ++fetchGenRef.current; // claim this generation
+    const myGen = ++fetchGenRef.current;
     setIsLoading(true);
-
     try {
       if (isSupplierMode) {
         const token = localStorage.getItem("token");
@@ -105,52 +91,34 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
           `${BASE_URL}/goods-return-notice/by-supplier/${supplierId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-
-        if (myGen !== fetchGenRef.current) return; // stale — discard ✅
-
+        if (myGen !== fetchGenRef.current) return;
         const data       = res.data?.data ?? [] as any[];
         const normalized = data.map((r: any) => ({ ...r, status: normalizeStatus(r.status) }));
-
         setGoodsReturnNotes(normalized as GoodsReturnNote[]);
         setTotal(normalized.length);
         setServerStats(computeStats(normalized));
-
       } else {
-        // Fetch current page + full dataset in parallel for accurate stats
         const [pageRes, allRes] = await Promise.all([
           fetchGoodsReturns(page, limit, searchTerm),
           fetchGoodsReturns(1, 9999, ""),
         ]);
-
-        if (myGen !== fetchGenRef.current) return; // stale — discard ✅
-
-        const pageData = (pageRes.data as any[]).map(r => ({
-          ...r, status: normalizeStatus(r.status)
-        }));
-        const allData = (allRes.data as any[]).map(r => ({
-          ...r, status: normalizeStatus(r.status)
-        }));
-
+        if (myGen !== fetchGenRef.current) return;
+        const pageData = (pageRes.data as any[]).map(r => ({ ...r, status: normalizeStatus(r.status) }));
+        const allData  = (allRes.data  as any[]).map(r => ({ ...r, status: normalizeStatus(r.status) }));
         setGoodsReturnNotes(pageData as GoodsReturnNote[]);
         setTotal(pageRes.total);
-        setServerStats(computeStats(allData)); // stats from full data always ✅
+        setServerStats(computeStats(allData));
       }
-
     } catch (err: any) {
-      if (myGen !== fetchGenRef.current) return; // stale error — ignore ✅
+      if (myGen !== fetchGenRef.current) return;
       console.error(err);
       toast.error("Failed to load goods return notes");
     } finally {
-      if (myGen === fetchGenRef.current) {
-        setIsLoading(false); // only clear spinner for latest fetch ✅
-      }
+      if (myGen === fetchGenRef.current) setIsLoading(false);
     }
   }, [page, limit, searchTerm, supplierId, isSupplierMode]);
 
-  // ── ONE effect — useCallback handles the deps correctly ───────────────
-  useEffect(() => {
-    loadGoodsReturns();
-  }, [loadGoodsReturns]);
+  useEffect(() => { loadGoodsReturns(); }, [loadGoodsReturns]);
 
   // ── Load Available GRNs ────────────────────────────────────────────────
   const loadAvailableGRNs = useCallback(async () => {
@@ -160,8 +128,8 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         fetchGoodsReturns(1, 9999, ""),
       ]);
 
-      const allReturns    = returnRes.data as any[];
-      let   receivedGRNs  = (grnRes.data as any[]).filter(g => g.status === "received");
+      const allReturns   = returnRes.data as any[];
+      let   receivedGRNs = (grnRes.data as any[]).filter(g => g.status === "received");
 
       if (isSupplierMode) {
         receivedGRNs = receivedGRNs.filter((grn: any) => {
@@ -188,14 +156,29 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         .map((grn) => {
           const grnId        = String(grn._id ?? grn.id);
           const grnReturnMap = returnedQtyMap[grnId] || {};
+
           const items = (grn.items || []).map((item: any) => {
-            const accepted      = Number(item.acceptedQuantity) || 0;
-            const alreadyRet    = grnReturnMap[item.sku] || 0;
-            const returnableQty = Math.max(0, accepted - alreadyRet);
-            return { ...item, id: item._id ?? item.id, acceptedQuantity: accepted, returnableQty };
+            const accepted  = Number(item.acceptedQuantity)  || 0;
+            // ── FIX: returnable = rejected + damaged (NOT accepted) ────────
+            const rejected  = Number(item.rejectedQuantity)  || 0;
+            const damaged   = Number(item.damageQuantity)    || 0;
+            const alreadyRet = grnReturnMap[item.sku]        || 0;
+            // Max the user can return = (rejected + damaged) minus what was already returned
+            const returnableQty = Math.max(0, (rejected + damaged) - alreadyRet);
+
+            return {
+              ...item,
+              id:               item._id ?? item.id,
+              acceptedQuantity: accepted,
+              rejectedQuantity: rejected,  // pass through so dialog can display it
+              damageQuantity:   damaged,   // pass through so dialog can display it
+              returnableQty,
+            };
           });
+
           return { ...grn, id: grnId, items };
         })
+        // Only keep GRNs where at least one item has rejected/damaged stock to return
         .filter(grn => grn.items.some((i: any) => i.returnableQty > 0));
 
       setAvailableGRNs(normalised as GRNForReturn[]);
@@ -205,14 +188,10 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
     }
   }, [supplierId, isSupplierMode]);
 
-  useEffect(() => {
-    loadAvailableGRNs();
-  }, [loadAvailableGRNs]);
+  useEffect(() => { loadAvailableGRNs(); }, [loadAvailableGRNs]);
 
-  // ── Stats ──────────────────────────────────────────────────────────────
   const stats = useMemo(() => serverStats, [serverStats]);
 
-  // ── Filtered returns ───────────────────────────────────────────────────
   const filteredReturns = useMemo(() => {
     return goodsReturnNotes.filter(grtn => {
       const status = normalizeStatus(grtn.status);
@@ -226,9 +205,11 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
     if (!grn) { toast.error("Selected GRN not found."); return; }
     setSelectedGRN(grnId);
 
+    // Only items with returnableQty > 0 (i.e. rejected or damaged qty exists)
     const returnableItems = grn.items.filter((item: any) => (item.returnableQty ?? 0) > 0);
+
     if (returnableItems.length === 0) {
-      toast.warning("All items in this GRN have already been fully returned.");
+      toast.warning("No rejected or damaged items found in this GRN.");
       return;
     }
 
@@ -238,8 +219,12 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         productId:        item.productId,
         productName:      item.productName,
         sku:              item.sku,
-        acceptedQuantity: item.acceptedQuantity ?? 0,
-        receivedQuantity: item.returnableQty    ?? 0,
+        acceptedQuantity: item.acceptedQuantity  ?? 0,
+        // ── FIX: pass rejected + damaged so dialog can show the breakdown ──
+        rejectedQuantity: item.rejectedQuantity  ?? 0,
+        damageQuantity:   item.damageQuantity    ?? 0,
+        // receivedQuantity = the actual cap for return quantity input
+        receivedQuantity: item.returnableQty     ?? 0,
         returnQuantity:   0,
         returnReason:     "damaged",
         condition:        "",
@@ -256,7 +241,7 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         if (item._id !== itemId) return item;
         if (field === "returnQuantity") {
           const clamped = Math.min(
-            item.receivedQuantity,
+            item.receivedQuantity, // cap = rejected + damaged (set above)
             Math.max(0, typeof value === "number" ? value : parseInt(value) || 0)
           );
           return { ...item, returnQuantity: clamped };
@@ -302,14 +287,9 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
     };
 
     try {
-      // Cast to any — createGoodsReturn may return the record directly
-      // or wrapped in { data: ... } depending on your helper implementation
-      const response = await createGoodsReturn(payload) as any;
-
-      // Unwrap either shape: { data: {...} }  OR  the record itself
+      const response     = await createGoodsReturn(payload) as any;
       const serverRecord = response?.data ?? response ?? {};
 
-      // ✅ Build optimistic record with status always set
       const optimisticRecord: GoodsReturnNote = {
         ...serverRecord,
         _id:          serverRecord?._id || `temp-${Date.now()}`,
@@ -328,10 +308,8 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         })) as any,
       };
 
-      // Use a local variable — avoids "possibly undefined" TS error
       const recordTotal: number = optimisticRecord.totalAmount || 0;
 
-      // ✅ Show immediately — no wait, no flash
       setGoodsReturnNotes(prev => [optimisticRecord, ...prev]);
       setServerStats(prev => ({
         ...prev,
@@ -343,7 +321,6 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
       toast.success("Return Note created — awaiting manager approval");
       resetForm();
 
-      // ✅ Background sync with generation counter — won't overwrite if stale
       setTimeout(async () => {
         await loadGoodsReturns();
         await loadAvailableGRNs();
@@ -376,11 +353,9 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
     try {
       setIsUpdatingStatus(returnId);
       await updateGoodsReturn(returnId, { status: newStatus });
-
       setGoodsReturnNotes(prev =>
         prev.map(g => g._id === returnId ? { ...g, status: newStatus } : g)
       );
-
       setServerStats(prev => {
         const u = { ...prev };
         if (["pending","approved","in-transit"].includes(currentStatus)) u.pending   = Math.max(0, u.pending   - 1);
@@ -391,7 +366,6 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         if (newStatus === "rejected")                                    u.rejected  = u.rejected  + 1;
         return u;
       });
-
       const messages: Record<ReturnStatus, string> = {
         "approved":   "✅ Return approved — items ready to dispatch",
         "in-transit": "🚚 Items dispatched to supplier",
@@ -400,10 +374,8 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
         "pending":    "Return set to pending",
       };
       toast.success(messages[newStatus]);
-
       await loadGoodsReturns();
       if (newStatus === "completed") await loadAvailableGRNs();
-
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to update status");
       await loadGoodsReturns();
@@ -474,14 +446,13 @@ export const useGoodsReturn = (options: UseGoodsReturnOptions = {}) => {
 
   return {
     goodsReturnNotes, filteredReturns, stats, availableGRNs, statuses,
-    // ✅ searchTerm/setSearchTerm map to raw input — debounce is internal
     searchTerm:    searchInput,
     setSearchTerm: setSearchInput,
     selectedStatus, setSelectedStatus,
     viewMode, setViewMode,
     isLoading, isExporting, isUpdatingStatus,
     page, setPage, limit, setLimit, total,
-    selectedGRN, returnedBy, setReturnedBy,
+    selectedGRN, returnedBy,   setReturnedBy,
     returnReason, setReturnReason,
     returnNotes,  setReturnNotes,
     returningItems, returnDate, setReturnDate,

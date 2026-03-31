@@ -19,7 +19,6 @@ export default function PurchaseOrdersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [viewingOrder, setViewingOrder] = useState<IPurchaseOrder | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-const [nextNumber, setNextNumber] = useState();
   const {
     filteredOrders,
     stats,

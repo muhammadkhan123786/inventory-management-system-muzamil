@@ -111,7 +111,7 @@ const fetchOrdersData = async () => {
     try {
       setLoadingOrderNumber(true);
       const  nextOrderNumber  = await PurchaseOrderAPI.generateNextOrderNumber();
-      console.log("purchaseOrderNumber", nextOrderNumber);
+     
       setOrderNumber(nextOrderNumber?.purchaseOrderAutoCode);
     } catch (err) {
       console.error("Failed to generate order number", err);
@@ -143,10 +143,13 @@ const fetchOrdersData = async () => {
    */
   const stats: PurchaseOrderStats = useMemo(() => ({
     totalOrders: orders?.length || 0,
-    pendingOrders: orders?.filter(o => o.status === 'pending' || o.status === 'approved').length || 0,
-    orderedCount: orders?.filter(o => o.status === 'ordered').length || 0,
+    pendingOrders: orders?.filter(o => o.status === 'cancelled').length || 0,
+    orderedCount: orders?.filter(o => o.status === 'draft').length || 0,
     receivedCount: orders?.filter(o => o.status === 'received').length || 0
   }), [orders]);
+
+
+  console.log("state", stats)
 
   /**
    * Filter orders (client-side for immediate feedback)

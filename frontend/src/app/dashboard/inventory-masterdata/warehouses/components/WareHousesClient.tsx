@@ -16,8 +16,11 @@ import { fetchWarehouses, deleteWarehouse } from "@/hooks/useWareHouses";
 import { IWarehouse } from "../../../../../../../common/IWarehouses.interface";
 import { basicCommonInfoDto } from "../../../../../../../common/DTOs/profilecommonDto";
 import AnimatedIcon from "@/app/common-form/AnimatedIcon";
+// ── same helper Country uses ───────────────────────────────────────────────
+import { updateItem } from "@/helper/apiHelper";
+import { toast } from "react-hot-toast";
 
-const THEME_COLOR = "var(--primary-gradient)"; // Changed to match blueprint gradient pattern
+const THEME_COLOR = "var(--primary-gradient)";
 
 export interface WarehouseWithPopulated
   extends Omit<IWarehouse, "personId" | "contactId" | "addressId"> {
@@ -33,37 +36,32 @@ export interface WarehouseWithPopulated
 }
 
 export default function WareHousesClient() {
-  const [dataList, setDataList] = useState<WarehouseWithPopulated[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [editingData, setEditingData] = useState<WarehouseWithPopulated | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [displayView, setDisplayView] = useState<"table" | "card">("table");
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  const [dataList,          setDataList]          = useState<WarehouseWithPopulated[]>([]);
+  const [searchTerm,        setSearchTerm]        = useState("");
+  const [showForm,          setShowForm]          = useState(false);
+  const [editingData,       setEditingData]       = useState<WarehouseWithPopulated | null>(null);
+  const [loading,           setLoading]           = useState(true);
+  const [currentPage,       setCurrentPage]       = useState(1);
+  const [totalPages,        setTotalPages]        = useState(1);
+  const [displayView,       setDisplayView]       = useState<"table" | "card">("table");
+  const [filterStatus,      setFilterStatus]      = useState<"all" | "active" | "inactive">("all");
+  const [totalActiveCount,  setTotalActiveCount]  = useState(0);
+  const [totalInactiveCount,setTotalInactiveCount]= useState(0);
 
-  // Stats States
-  const [totalActiveCount, setTotalActiveCount] = useState(0);
-  const [totalInactiveCount, setTotalInactiveCount] = useState(0);
-
-  const mapToWarehouseWithPopulated = (
-    item: IWarehouse
-  ): WarehouseWithPopulated => {
+  const mapToWarehouseWithPopulated = (item: IWarehouse): WarehouseWithPopulated => {
     const resolvedUserId =
       typeof item.userId === "object" ? (item.userId as any)._id : item.userId;
-
     return {
-      _id: item._id || "",
-      userId: item.userId,
+      _id:               item._id || "",
+      userId:            item.userId,
       wareHouseStatusId: item.wareHouseStatusId,
-      openTime: item.openTime,
-      closeTime: item.closeTime,
-      capacity: item.capacity,
+      openTime:          item.openTime,
+      closeTime:         item.closeTime,
+      capacity:          item.capacity,
       availableCapacity: item.availableCapacity,
-      isActive: item.isActive ?? true,
-      isDeleted: item.isDeleted ?? false,
-      isDefault: item.isDefault ?? false,
+      isActive:          item.isActive  ?? true,
+      isDeleted:         item.isDeleted ?? false,
+      isDefault:         item.isDefault ?? false,
       person:
         item.personId && typeof item.personId === "object"
           ? (item.personId as any)
@@ -74,31 +72,19 @@ export default function WareHousesClient() {
           : { mobileNumber: "", phoneNumber: "", emailId: "" },
       address:
         item.addressId && typeof item.addressId === "object"
-          ? {
-              ...(item.addressId as any),
-              userId: resolvedUserId,
-            }
-          : {
-              address: "",
-              city: "",
-              country: "",
-              zipCode: "",
-              userId: resolvedUserId,
-            },
+          ? { ...(item.addressId as any), userId: resolvedUserId }
+          : { address: "", city: "", country: "", zipCode: "", userId: resolvedUserId },
     };
   };
 
   const fetchData = useCallback(async (page = 1, search = "") => {
     try {
       setLoading(true);
-      const res = await fetchWarehouses(page, 10, search);
+      const res        = await fetchWarehouses(page, 10, search);
       const mappedData = (res.data || []).map(mapToWarehouseWithPopulated);
       setDataList(mappedData);
-      
-      // Calculate stats from all data (or you can fetch stats separately)
-      setTotalActiveCount(mappedData.filter(d => d.isActive).length || 0);
-      setTotalInactiveCount(mappedData.filter(d => !d.isActive).length || 0);
-      
+      setTotalActiveCount(mappedData.filter(d =>  d.isActive).length);
+      setTotalInactiveCount(mappedData.filter(d => !d.isActive).length);
       setTotalPages(Math.ceil(res.total / 10) || 1);
       setCurrentPage(page);
     } catch (err) {
@@ -129,21 +115,46 @@ export default function WareHousesClient() {
     setShowForm(true);
   };
 
-  const handleStatusChange = (id: string, newStatus: boolean) => {
-    // Implement status change logic here
-    console.log("Status changed:", id, newStatus);
+  // ── FIX: actually call the API and update local state ─────────────────
+  const handleStatusChange = async (id: string, newStatus: boolean) => {
+    // 1. Optimistic update — toggle feels instant in the UI
+    setDataList(prev =>
+      prev.map(item =>
+        item._id === id ? { ...item, isActive: newStatus } : item
+      )
+    );
+    // Keep stats in sync with optimistic update
+    setTotalActiveCount(prev =>  newStatus ? prev + 1 : Math.max(0, prev - 1));
+    setTotalInactiveCount(prev => newStatus ? Math.max(0, prev - 1) : prev + 1);
+
+    try {
+      // 2. Persist to server — same pattern as Country's handleStatusChange
+      await updateItem("/warehouses", id, { isActive: newStatus });
+      toast.success(`Warehouse ${newStatus ? "activated" : "deactivated"} successfully`);
+    } catch (err) {
+      console.error("Status update failed:", err);
+      toast.error("Failed to update status. Reverting...");
+      // 3. Revert on failure
+      setDataList(prev =>
+        prev.map(item =>
+          item._id === id ? { ...item, isActive: !newStatus } : item
+        )
+      );
+      setTotalActiveCount(prev =>  newStatus ? Math.max(0, prev - 1) : prev + 1);
+      setTotalInactiveCount(prev => newStatus ? prev + 1 : Math.max(0, prev - 1));
+    }
   };
 
   const filteredDataList = useMemo(() => {
-    if (filterStatus === 'all') return dataList;
-    return dataList.filter((d) => (filterStatus === 'active' ? d.isActive : !d.isActive));
+    if (filterStatus === "all") return dataList;
+    return dataList.filter(d => filterStatus === "active" ? d.isActive : !d.isActive);
   }, [filterStatus, dataList]);
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Updated Gradient Header - Matching blueprint pattern */}
+
+        {/* Header */}
         <div className="bg-linear-to-r from-orange-500 via-red-500 to-pink-600 rounded-2xl p-6 md:p-7 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-slideInLeft">
           <div className="flex items-center gap-4 w-full md:w-auto">
             <AnimatedIcon icon={<WarehouseIcon size={32} className="text-white" />} />
@@ -153,31 +164,24 @@ export default function WareHousesClient() {
             </div>
           </div>
           <button
-            onClick={() => {
-              setEditingData(null);
-              setShowForm(true);
-            }}
+            onClick={() => { setEditingData(null); setShowForm(true); }}
             className="flex items-center justify-center gap-2 text-orange-600 bg-white hover:bg-white/90 px-5 py-2 rounded-lg text-sm h-9 font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95 w-full md:w-auto"
           >
             <Plus size={22} /> Add Warehouse
           </button>
         </div>
 
-        {/* Reusable Stats Cards Component */}
-        <StatsCards 
+        {/* Stats */}
+        <StatsCards
           totalCount={dataList.length}
           activeCount={totalActiveCount}
           inactiveCount={totalInactiveCount}
           onFilterChange={(filter) => setFilterStatus(filter)}
-          labels={{
-            total: "Total Warehouses",
-            active: "Active Warehouses",
-            inactive: "Inactive Warehouses"
-          }}
+          labels={{ total: "Total Warehouses", active: "Active Warehouses", inactive: "Inactive Warehouses" }}
           icons={{ total: <WarehouseIcon size={24} /> }}
         />
 
-        {/* Search Bar */}
+        {/* Search */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3 focus-within:ring-2 focus-within:ring-orange-300 transition-all">
           <Search className="text-gray-400" size={20} />
           <input
@@ -185,14 +189,11 @@ export default function WareHousesClient() {
             placeholder="Search by location or manager name..."
             className="w-full outline-none text-lg"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <div className="bg-white p-5 pt-9 border-t-4! border-[#FE6B1D]! shadow-sm rounded-b-2xl">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4 mb-6">
             <div className="space-y-1">
@@ -207,8 +208,8 @@ export default function WareHousesClient() {
               <button
                 onClick={() => setDisplayView("card")}
                 className={`flex-1 md:flex-none px-3 h-8 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
-                  displayView === "card" 
-                    ? "bg-linear-to-r from-orange-500 to-pink-600 text-white shadow-lg" 
+                  displayView === "card"
+                    ? "bg-linear-to-r from-orange-500 to-pink-600 text-white shadow-lg"
                     : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
                 }`}
               >
@@ -217,8 +218,8 @@ export default function WareHousesClient() {
               <button
                 onClick={() => setDisplayView("table")}
                 className={`flex-1 md:flex-none px-3 h-8 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
-                  displayView === "table" 
-                    ? "bg-linear-to-r from-orange-500 to-pink-600 text-white shadow-lg" 
+                  displayView === "table"
+                    ? "bg-linear-to-r from-orange-500 to-pink-600 text-white shadow-lg"
                     : "text-gray-600 hover:text-orange-600 hover:bg-orange-50"
                 }`}
               >
@@ -230,10 +231,7 @@ export default function WareHousesClient() {
           {showForm && (
             <WareHousesForm
               editingData={editingData}
-              onClose={() => {
-                setShowForm(false);
-                setEditingData(null);
-              }}
+              onClose={() => { setShowForm(false); setEditingData(null); }}
               onRefresh={() => fetchData(currentPage, searchTerm)}
               themeColor="#FE6B1D"
             />
@@ -246,14 +244,13 @@ export default function WareHousesClient() {
             </div>
           ) : (
             <>
-              {/* Filter Status Feedback */}
-              {filterStatus !== 'all' && (
+              {filterStatus !== "all" && (
                 <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg flex items-center justify-between">
                   <span className="text-sm text-orange-700 font-medium">
                     Showing {filterStatus} ({filteredDataList.length})
                   </span>
                   <button
-                    onClick={() => setFilterStatus('all')}
+                    onClick={() => setFilterStatus("all")}
                     className="text-xs text-orange-600 hover:text-orange-800 font-bold"
                   >
                     Clear Filter

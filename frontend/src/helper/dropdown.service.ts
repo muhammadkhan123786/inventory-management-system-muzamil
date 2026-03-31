@@ -154,12 +154,14 @@ export class DropdownService {
         _id: string;
         currencyName: string;
         currencySymbol: string;
+        isDefault: boolean;
       }>("/currencies", { limit: 100 });
 
 
       return response.data.map((item) => ({
         value: item._id,
         label: `${item.currencyName} - ${item.currencySymbol}`,
+        isDefault: item.isDefault,
         // code: item.code,
       }));
     } catch (error) {

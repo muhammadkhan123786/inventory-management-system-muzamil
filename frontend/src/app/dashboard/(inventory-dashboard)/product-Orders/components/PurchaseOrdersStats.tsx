@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/form/Card';
 import { Badge } from '@/components/form/Badge';
 import { PurchaseOrderStats } from '../types/purchaseOrders';
-import { Receipt, Clock, Truck, CheckCircle2 } from 'lucide-react';
+import { Receipt, XCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { IPurchaseOrder } from '../types/purchaseOrders';
 
@@ -22,17 +22,17 @@ const statCards = [
   },
   {
     key: 'pendingOrders' as const,
-    label: 'Pending Approval',
-    gradient: 'from-yellow-500 to-amber-500',
-    icon: Clock,
-    badgeText: 'Pending'
+     label: 'Cancelled Orders',
+    gradient: 'from-red-500 to-rose-500',
+     icon: XCircle,
+    badgeText: 'Cancelled'
   },
   {
     key: 'orderedCount' as const,
-    label: 'In Transit',
-    gradient: 'from-[#4f46e5] to-[#7c3aed]',
-    icon: Truck,
-    badgeText: 'Transit'
+     label: 'Draft Orders',
+     gradient: 'from-indigo-500 to-purple-500',
+    icon: FileText,
+    badgeText: 'Draft'
   },
   {
     key: 'receivedCount' as const,

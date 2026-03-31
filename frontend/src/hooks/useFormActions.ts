@@ -8,7 +8,6 @@ const getUserId = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   return user.id || user._id || "";
 };
-console.log(getUserId())
 // T generic type hai jo aapke interface (e.g., IBusinessTypes) ko represent karega
 export const useFormActions = <T extends { _id: string }>(
   endpoint: string, // API endpoint e.g., "/business-types"

@@ -417,6 +417,5 @@ export const fetchSuppliers = async (
     ...getAuthConfig(),
     params,
   });
-  console.log("supp", res);
   return res.data.data;
 };

@@ -1,21 +1,26 @@
 'use client';
 
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { GoodsReturnCard } from './GoodsReturnCard';
 import { Card, CardContent } from '@/components/form/Card';
 import { PackageX } from 'lucide-react';
-import { GoodsReturnNote } from '../types/goodsReturn';
+import { GoodsReturnNote, ReturnStatus } from '../types/goodsReturn';
 
 interface GoodsReturnGridViewProps {
-  returns: GoodsReturnNote[];
-  onView: (grtn: GoodsReturnNote) => void;
-  onDownload?: (grtn: GoodsReturnNote) => void;
+  returns:          GoodsReturnNote[];
+  onView:           (grtn: GoodsReturnNote) => void;
+  onDownload?:      (grtn: GoodsReturnNote) => void;
+  onStatusUpdate:   (id: string, status: ReturnStatus) => void;
+  isUpdatingStatus: string | null;
 }
 
 export const GoodsReturnGridView: React.FC<GoodsReturnGridViewProps> = ({
   returns,
   onView,
-  onDownload
+  onDownload,
+  onStatusUpdate,
+  isUpdatingStatus,
 }) => {
   if (returns?.length === 0) {
     return (
@@ -28,6 +33,7 @@ export const GoodsReturnGridView: React.FC<GoodsReturnGridViewProps> = ({
       </Card>
     );
   }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -42,6 +48,8 @@ export const GoodsReturnGridView: React.FC<GoodsReturnGridViewProps> = ({
           index={index}
           onView={onView}
           onDownload={onDownload}
+          onStatusUpdate={onStatusUpdate}
+          isUpdatingStatus={isUpdatingStatus}
         />
       ))}
     </motion.div>
