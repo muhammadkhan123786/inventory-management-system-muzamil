@@ -67,7 +67,7 @@ const SupplierPaymentSchema = new Schema<ISupplierPayment>(
 // Indexes
 SupplierPaymentSchema.index({ supplierId: 1, createdAt: -1 });
 SupplierPaymentSchema.index({ purchaseOrderId: 1 });
-SupplierPaymentSchema.index({ paymentNumber: 1 }, { unique: true });
+// SupplierPaymentSchema.index({ paymentNumber: 1 }, { unique: true });
 
 // Auto-generate payment number
 SupplierPaymentSchema.pre("validate", async function () {
