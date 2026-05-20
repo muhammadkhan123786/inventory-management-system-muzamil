@@ -101,13 +101,13 @@ export const PurchaseOrderSchema = new Schema(
   { timestamps: true }
 );
 
-PurchaseOrderSchema.index(
-  { orderNumber: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { isDeleted: false },
-  }
-);
+// PurchaseOrderSchema.index(
+//   { orderNumber: 1 },
+//   {
+//     unique: true,
+//     partialFilterExpression: { isDeleted: false },
+//   }
+// );
 
 // ── Zod validation ────────────────────────────────────────────────────────────
 
