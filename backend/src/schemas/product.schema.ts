@@ -85,7 +85,12 @@ export const ProductSchema: SchemaDefinition = {
 
   productName: { type: String, required: true },
   sku: { type: String, required: true, unique: true },
-  barcode: { type: String, default: "" },
+ barcode: {
+  type: String,
+  unique: true,
+  index: true,
+  required: true,
+},
   brand: { type: String, default: "" },
   manufacturer: { type: String, default: "" },
   modelNumber: { type: String, default: "" },
@@ -148,7 +153,7 @@ export const createProductValidation = z.object({
   ...commonSchemaValidation,
   productName: z.string().min(1),
   sku: z.string().min(1),
-  barcode: z.string().default(""),
+  barcode: z.string(),
   brand: z.string().default(""),
   manufacturer: z.string().default(""),
   modelNumber: z.string().default(""),

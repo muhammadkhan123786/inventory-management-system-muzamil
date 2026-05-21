@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, KeyboardEvent } from "react";
+import { useState, useCallback, KeyboardEvent, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, TagIcon, X, Plus } from "lucide-react";
 import { Input } from "@/components/form/Input";
@@ -10,6 +10,8 @@ import { Button } from "@/components/form/CustomButton";
 import { Badge } from "@/components/form/Badge";
 import ImageUploadSections from "./ImageUploadSections";
 import { BasicInfoStepProps } from "../../types/product";
+import { generateBarcode } from "./generateBarcode"
+
 
 // ─── Reusable chip-input (used for both keywords & tags) ──────────────────────
 
@@ -120,6 +122,21 @@ export function ProductInformationCard({
   onRemoveImage,
   setImage,
 }: BasicInfoStepProps) {
+
+//   const handleGenerateBarcode = () => {
+//   const barcode = generateBarcode();
+
+//   onInputChange("barcode", barcode);
+
+// };
+  useEffect(() => {
+  // Only generate if barcode is empty
+  if (!formData.barcode) {
+    const barcode = generateBarcode();
+
+    onInputChange("barcode", barcode);
+  }
+}, []);
   return (
     <motion.div
       key="step2"
@@ -214,7 +231,7 @@ export function ProductInformationCard({
             </div>
 
             {/* Barcode */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Barcode / EAN
               </label>
@@ -222,10 +239,17 @@ export function ProductInformationCard({
                 value={formData.barcode}
                 onChange={(e) => onInputChange("barcode", e.target.value)}
                 placeholder="e.g., 5060123456789"
+                readOnly
                  className="border-2 border-cyan-200 focus:border-cyan-500"
               />
-            </div>
-
+            </div> */}
+ {/* <Button
+      type="button"
+      onClick={handleGenerateBarcode}
+      className="whitespace-nowrap"
+    >
+      Generate
+    </Button> */}
             {/* Short Description */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
