@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo }  from "react";
+import Barcode from "react-barcode";
 import { Badge }                      from "@/components/form/Badge";
 import { Button }                     from "@/components/form/CustomButton";
 import { Card, CardContent }          from "@/components/form/Card";
@@ -10,13 +11,14 @@ import {
 import {
   X, Star, ChevronRight, Package, DollarSign, Tag,
   Archive, Factory, Shield, Edit, Trash2,
-  Barcode, Hash, Building2, MapPin, Warehouse, Box,
+  Barcode as BarcodeIcon, Hash, Building2, MapPin, Warehouse, Box,
   AlertTriangle, CheckCircle, Clock, Info, Layers,
   Package2, FileText, ListChecks, Sparkles, FolderTree,
   Ruler, Weight, Zap,
 } from "lucide-react";
 import { ProductListItem, CategoryInfo } from "../types/product";
 import { useCurrencyStore }              from "@/stores/currency.store";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -393,12 +395,45 @@ export default function ProductDetailsModal({
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                   <Hash className="h-3.5 w-3.5" /> Product Identity
                 </h3>
-                <InfoRow icon={Barcode}   label="Product SKU"  value={product.sku ?? (product as any).sku} mono />
+                <InfoRow icon={BarcodeIcon}   label="Product SKU"  value={product.sku ?? (product as any).sku} mono />
                 <InfoRow icon={Hash}      label="Variant SKU"  value={attr?.sku} mono />
-                <InfoRow icon={Barcode}   label="Barcode"      value={(product as any).barcode} mono />
+
+                {/* <InfoRow 
+                icon={BarcodeIcon} 
+                  label="Barcode"    
+                    value={(product as any).barcode} mono
+                    
+                     /> */}
+
+
+
                 <InfoRow icon={Building2} label="Brand"        value={(product as any).brand} />
                 <InfoRow icon={Factory}   label="Manufacturer" value={(product as any).manufacturer} />
                 <InfoRow icon={Info}      label="Model No."    value={(product as any).modelNumber} mono />
+
+
+                <div className="flex  gap-2">
+  
+  {/* Label row */}
+  {/* <div className="flex items-center gap-2">
+    <BarcodeIcon className="h-4 w-4 text-gray-600" />
+    <span className="text-sm font-medium text-gray-700">
+      Barcode
+    </span>
+  </div> */}
+
+  {/* Barcode render */}
+  <div className="bg-white  w-fit mt-6">
+    <Barcode
+      value={(product as any).barcode}
+      format="CODE128"
+      width={2}
+      height={50}
+      displayValue={true}
+    />
+  </div>
+
+</div>
               </CardContent>
             </Card>
 
