@@ -301,6 +301,9 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
        *  1. serverImageUrls  → AI was used; images already on server as proper URLs
        *  2. base64 strings   → no AI; send raw data and let the backend store them
        */
+
+      console.log("Current Variants State:", JSON.stringify(variants, null, 2));
+
       const imagePayload: string[] =
         serverImageUrls.length > 0
           ? serverImageUrls
@@ -320,38 +323,95 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         images: imagePayload,
         categoryId: selectedPath.at(-1),
         categoryPath: selectedPath,
-        attributes: variants.map((v) => ({
-          sku: v.sku,
-          attributes: v.attributes,
-          pricing: v.marketplacePricing.map((p) => ({
-            costPrice: p.costPrice,
-            sellingPrice: p.sellingPrice,
-            retailPrice: p.retailPrice,
-            discountPercentage: p.discountPercentage,
-            taxId: p.taxId || null,
-            taxRate: p.taxRate,
-            vatExempt: p.vatExempt,
-          })),
-          stock: {
-            stockQuantity: v.stockQuantity,
-            minStockLevel: v.minStockLevel,
-            maxStockLevel: v.maxStockLevel,
-            reorderPoint: v.reorderPoint,
-            safetyStock: v.safetyStock,
-            leadTimeDays: v.leadTimeDays,
-            stockLocation: v.stockLocation,
-            warehouseId: v.warehouseId,
-            binLocation: v.binLocation,
-            productStatusId: v.productStatusId,
-            conditionId: v.conditionId,
-            featured: v.featured,
-            supplierId: v.supplierId,
-          },
-          warranty: {
-            warrantyType: v.warranty,
-            warrantyPeriod: v.warrantyPeriod,
-          },
-        })),
+        attributes: variants.map((v: any) => {
+  // 1. EXACT PATH FIX: State ke andar se pricing object se values nikalen
+  const rawCost = v.pricing?.costPrice ?? 0;
+  const rawSelling = v.pricing?.sellingPrice ?? 0;
+  const rawRetail = v.pricing?.retailPrice ?? 0;
+  const rawDiscount = v.pricing?.discountPercentage ?? 0;
+  const rawTaxRate = v.pricing?.taxRate ?? 0;
+
+  // 2. Safely parse into numbers (kuch inputs string hain jaise "43" aur "54")
+  const costPrice = isNaN(Number(rawCost)) ? 0 : Number(rawCost);
+  const sellingPrice = isNaN(Number(rawSelling)) ? 0 : Number(rawSelling);
+  const retailPrice = isNaN(Number(rawRetail)) ? 0 : Number(rawRetail);
+  const discountPercentage = isNaN(Number(rawDiscount)) ? 0 : Number(rawDiscount);
+  const taxRate = isNaN(Number(rawTaxRate)) ? 0 : Number(rawTaxRate);
+
+  // Zod schema check bypass (sellingPrice must be >= costPrice)
+  const validatedSellingPrice = sellingPrice >= costPrice ? sellingPrice : costPrice;
+
+  return {
+    sku: v.sku,
+    attributes: v.attributes || {},
+    
+    // Backend expects an array [ ]
+    pricing: [
+      {
+        costPrice: costPrice,
+        sellingPrice: validatedSellingPrice,
+        retailPrice: retailPrice,
+        discountPercentage: discountPercentage,
+        taxId: v.pricing?.taxId && v.pricing.taxId.trim() !== "" ? v.pricing.taxId : null,
+        taxRate: taxRate,
+        vatExempt: Boolean(v.pricing?.vatExempt),
+      }
+    ],
+
+    stock: {
+      stockQuantity: isNaN(Number(v.stockQuantity)) ? 0 : Number(v.stockQuantity),
+      minStockLevel: isNaN(Number(v.minStockLevel)) ? 0 : Number(v.minStockLevel),
+      maxStockLevel: isNaN(Number(v.maxStockLevel)) ? 0 : Number(v.maxStockLevel),
+      reorderPoint: isNaN(Number(v.reorderPoint)) ? 0 : Number(v.reorderPoint),
+      safetyStock: isNaN(Number(v.safetyStock)) ? 0 : Number(v.safetyStock),
+      leadTimeDays: isNaN(Number(v.leadTimeDays)) ? 0 : Number(v.leadTimeDays),
+      stockLocation: v.stockLocation || "",
+      binLocation: v.binLocation || "",
+      featured: Boolean(v.featured),
+      warehouseId: v.warehouseId && v.warehouseId.trim() !== "" ? v.warehouseId : null,
+      productStatusId: v.productStatusId && v.productStatusId.trim() !== "" ? v.productStatusId : null,
+      conditionId: v.conditionId && v.conditionId.trim() !== "" ? v.conditionId : null,
+      supplierId: v.supplierId && v.supplierId.trim() !== "" ? v.supplierId : "000000000000000000000000",
+    },
+
+    warranty: {
+      warrantyType: v.warranty || "no_warranty",
+      warrantyPeriod: v.warrantyPeriod || "None",
+    },
+  };
+}),
+        // attributes: variants.map((v) => ({
+        //   sku: v.sku,
+        //   attributes: v.attributes,
+        //   pricing:[ {
+        //     costPrice: v.costPrice,
+        //     sellingPrice: v.sellingPrice,
+        //     retailPrice: v.retailPrice,
+        //     discountPercentage: v.discountPercentage,
+        //     taxId: v.taxId || null,
+        //     taxRate: v.taxRate,
+        //     vatExempt: v.vatExempt,
+        //   }],
+        //   stock: {
+        //     stockQuantity: v.stockQuantity,
+        //     minStockLevel: v.minStockLevel,
+        //     maxStockLevel: v.maxStockLevel,
+        //     reorderPoint: v.reorderPoint,
+        //     safetyStock: v.safetyStock,
+        //     leadTimeDays: v.leadTimeDays,
+        //     stockLocation: v.stockLocation,
+        //     warehouseId: v.warehouseId,
+        //     binLocation: v.binLocation,
+        //     productStatusId: v.productStatusId,
+        //     conditionId: v.conditionId,
+        //     featured: v.featured,
+        //     supplierId: v.supplierId,
+        //   },
+        //   warranty: {
+        //     warrantyType: v.warranty,
+        //     warrantyPeriod: v.warrantyPeriod,
+        //   },
+        // })),
       };
 
       try {

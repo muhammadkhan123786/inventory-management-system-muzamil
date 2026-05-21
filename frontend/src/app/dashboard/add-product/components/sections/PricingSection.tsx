@@ -121,6 +121,13 @@ export function PricingSection({
   onValidationChange,
 }: PricingSectionProps) {
 
+  const toNumber = (value: string) => {
+  if (value === "") return "";
+  
+  const num = Number(value);
+
+  return isNaN(num) ? "" : num;
+};
   // ── Parsed live values ────────────────────────────────────────────────
   const costPrice = parseFloat(String(currentVariant.costPrice || "0")) || 0;
   const sellingPrice = parseFloat(String(currentVariant.sellingPrice || "0")) || 0;
@@ -202,7 +209,12 @@ export function PricingSection({
               min="0"
               step="0.01"
               value={currentVariant.costPrice || ""}
-              onChange={(e) => onVariantFieldChange("costPrice", e.target.value)}
+              onChange={(e) =>
+  onVariantFieldChange(
+    "costPrice",
+    toNumber(e.target.value)
+  )
+}
               onBlur={() => touch("costPrice")}
               placeholder="0.00"
               className={`pl-7 ${fieldBorder(!!touched.costPrice, costError, "border-2 border-gray-200 focus:border-gray-400")}`}
@@ -234,7 +246,12 @@ export function PricingSection({
               min="0"
               step="0.01"
               value={currentVariant.sellingPrice || ""}
-              onChange={(e) => onVariantFieldChange("sellingPrice", e.target.value)}
+              onChange={(e) =>
+  onVariantFieldChange(
+    "sellingPrice",
+    toNumber(e.target.value)
+  )
+}
               onBlur={() => touch("sellingPrice")}
               placeholder={costPrice > 0 ? `≥ ${costPrice.toFixed(2)}` : "0.00"}
               className={`pl-7 ${fieldBorder(!!touched.sellingPrice, sellingError, "border-2 border-green-200 focus:border-green-500")}`}

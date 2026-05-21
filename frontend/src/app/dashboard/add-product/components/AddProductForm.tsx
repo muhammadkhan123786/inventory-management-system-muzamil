@@ -11,15 +11,6 @@ import { BasicInfoStep } from "./steps/BasicInfoStep";
 import { AttributesAndPricingStep } from "./steps/AttributesAndPricingStep";
 import { Toaster } from "sonner";
 
-const MARKETPLACE_OPTIONS = [
-  { value: "amazon",      label: "Amazon",      icon: "🏪" },
-  { value: "ebay",        label: "eBay",        icon: "🛒" },
-  { value: "shopify",     label: "Shopify",     icon: "🏬" },
-  { value: "etsy",        label: "Etsy",        icon: "🎨" },
-  { value: "walmart",     label: "Walmart",     icon: "🏪" },
-  { value: "own-website", label: "Own Website", icon: "🌐" },
-];
-
 export default function AddProductForm() {
   const {
     currentStep,
@@ -119,7 +110,7 @@ export default function AddProductForm() {
             productStatus={dropdowns.productStatus ?? []}
             conditions={dropdowns.conditions ?? []}
             warrantyOptions={getWarrantyOptions()}
-            marketplaces={MARKETPLACE_OPTIONS}
+            // marketplaces={MARKETPLACE_OPTIONS}
             variants={variants}
             setVariants={setVariants}
           />
@@ -130,6 +121,10 @@ export default function AddProductForm() {
     }
   };
 
+
+
+
+  
   return (
     <div className="space-y-6 relative pb-20">
       <Toaster position="top-right" richColors />

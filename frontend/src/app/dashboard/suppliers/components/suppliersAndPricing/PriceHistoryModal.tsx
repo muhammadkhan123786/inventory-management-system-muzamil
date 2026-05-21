@@ -233,7 +233,7 @@ export function PriceHistoryModal({
                                 <div className="flex items-baseline gap-2">
                                   {/* ✅ newPrice */}
                                   <span className="text-4xl font-bold text-gray-900">
-                                    ${currencySymbol}{current.newPrice.toFixed(2)}
+                                    {currencySymbol}{current.newPrice.toFixed(2)}
                                   </span>
                                   <span className="text-gray-400 text-sm">{current.currency || "GBP"}</span>
                                 </div>
@@ -241,7 +241,7 @@ export function PriceHistoryModal({
                                 {/* Previous + change */}
                                 {current.previousPrice !== null && (
                                   <p className="text-sm text-gray-500 mt-1.5 flex items-center gap-2">
-                                    <span>Previous: <strong className="text-gray-700">${currencySymbol}{current.previousPrice.toFixed(2)}</strong></span>
+                                    <span>Previous: <strong className="text-gray-700">{currencySymbol}{current.previousPrice.toFixed(2)}</strong></span>
                                     {current.change !== null && current.direction !== "same" && (
                                       <span className={`font-bold text-sm ${current.direction === "up" ? "text-red-500" : "text-emerald-600"}`}>
                                         {current.direction === "up" ? "▲ +" : "▼ "}

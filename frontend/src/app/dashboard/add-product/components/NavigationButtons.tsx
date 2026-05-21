@@ -1,12 +1,11 @@
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
-import { Button } from '@/components/form/CustomButton';
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { Button } from "@/components/form/CustomButton";
 
 interface NavigationButtonsProps {
   currentStep: number;
   totalSteps: number;
   onPrev: () => void;
- onNext: (e: React.MouseEvent<HTMLButtonElement>) => void;
- 
+  onNext: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export function NavigationButtons({
@@ -14,7 +13,6 @@ export function NavigationButtons({
   totalSteps,
   onPrev,
   onNext,
-  
 }: NavigationButtonsProps) {
   return (
     <div className="flex justify-between items-center gap-4 pt-6">
@@ -35,10 +33,10 @@ export function NavigationButtons({
             key={index}
             className={`h-2 w-12 rounded-full transition-all ${
               index + 1 === currentStep
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500'
+                ? "bg-gradient-to-r from-purple-500 to-pink-500"
                 : index + 1 < currentStep
-                ? 'bg-green-500'
-                : 'bg-gray-300'
+                  ? "bg-green-500"
+                  : "bg-gray-300"
             }`}
           />
         ))}
@@ -55,7 +53,6 @@ export function NavigationButtons({
         </Button>
       ) : (
         <Button
-       
           type="submit"
           className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8"
         >
