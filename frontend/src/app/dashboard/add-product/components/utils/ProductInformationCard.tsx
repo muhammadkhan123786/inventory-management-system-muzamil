@@ -231,7 +231,7 @@ export function ProductInformationCard({
             </div>
 
             {/* Barcode */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Barcode / EAN
               </label>
@@ -239,9 +239,10 @@ export function ProductInformationCard({
                 value={formData.barcode}
                 onChange={(e) => onInputChange("barcode", e.target.value)}
                 placeholder="e.g., 5060123456789"
+                readOnly
                  className="border-2 border-cyan-200 focus:border-cyan-500"
               />
-            </div>
+            </div> */}
  {/* <Button
       type="button"
       onClick={handleGenerateBarcode}
