@@ -6,6 +6,7 @@ interface NavigationButtonsProps {
   totalSteps: number;
   onPrev: () => void;
   onNext: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  isNextLoading?: boolean;
 }
 
 export function NavigationButtons({
@@ -13,6 +14,7 @@ export function NavigationButtons({
   totalSteps,
   onPrev,
   onNext,
+  isNextLoading = false,
 }: NavigationButtonsProps) {
   return (
     <div className="flex justify-between items-center gap-4 pt-6">
@@ -46,7 +48,9 @@ export function NavigationButtons({
         <Button
           type="button"
           onClick={onNext}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          disabled={isNextLoading}
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700
+                     hover:to-pink-700 text-white disabled:opacity-60"
         >
           Next
           <ChevronRight className="h-4 w-4 ml-2" />
@@ -54,7 +58,8 @@ export function NavigationButtons({
       ) : (
         <Button
           type="submit"
-          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8"
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700
+                     hover:to-emerald-700 text-white px-8"
         >
           <Save className="h-4 w-4 mr-2" />
           Save Product

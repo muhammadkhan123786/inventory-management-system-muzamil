@@ -8,7 +8,10 @@ import {
   ProductFormData,
   ImageItem,
 } from "../types/product";
-import { getCategoriesAtLevel, getSelectedCategoryPath } from "../utils/categoryHelpers";
+import {
+  getCategoriesAtLevel,
+  getSelectedCategoryPath,
+} from "../utils/categoryHelpers";
 import { fetchCategories } from "@/hooks/useCategory";
 import { DropdownService } from "@/helper/dropdown.service";
 import { fetchAttributes } from "@/hooks/useAttributes";
@@ -53,12 +56,16 @@ export interface ProductVariant {
   warranty: string;
   warrantyPeriod: string;
   supplierId: string;
+  pricing: any
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function csvToArray(csv: string): string[] {
-  return csv.split(",").map((s) => s.trim()).filter(Boolean);
+  return csv
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -72,7 +79,11 @@ function fileToBase64(file: File): Promise<string> {
 
 // ─── Hook ──────────────────────────────────────────────────────────────────────
 
-export function useProductForm({ initialData, onSubmit, categories }: UseProductFormProps) {
+export function useProductForm({
+  initialData,
+  onSubmit,
+  categories,
+}: UseProductFormProps) {
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -86,11 +97,14 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
   const [serverImageUrls, setServerImageUrls] = useState<string[]>([]);
 
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [fetchedCategories, setFetchedCategories] = useState<CategoryNode[]>(categories);
+  const [fetchedCategories, setFetchedCategories] =
+    useState<CategoryNode[]>(categories);
   const [dropdowns, setDropdowns] = useState<Partial<FourDropdownData>>({});
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
-  const [attributeCategoryIds, setAttributeCategoryIds] = useState<Set<string> | undefined>(undefined);
+  const [attributeCategoryIds, setAttributeCategoryIds] = useState<
+    Set<string> | undefined
+  >(undefined);
   const [attributeIdsLoading, setAttributeIdsLoading] = useState(true);
 
   // ─── Warranty options ──────────────────────────────────────────────────────
@@ -102,7 +116,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
       { value: "extended", label: "Extended Warranty" },
       { value: "lifetime", label: "Lifetime Warranty" },
     ],
-    []
+    [],
   );
 
   // ─── One-time: fetch all category IDs that have attributes ────────────────
@@ -111,7 +125,9 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
       try {
         setAttributeIdsLoading(true);
         const res = await fetchAttributes(1, 500, "", "");
-        const ids = new Set<string>((res.data ?? []).map((a: Attribute) => a.categoryId));
+        const ids = new Set<string>(
+          (res.data ?? []).map((a: Attribute) => a.categoryId),
+        );
         setAttributeCategoryIds(ids);
       } catch {
         setAttributeCategoryIds(new Set());
@@ -162,8 +178,9 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
           all.filter(
             (attr) =>
               attr.categoryId === leafId ||
-              (attr.isForSubcategories && selectedPath.includes(attr.categoryId))
-          )
+              (attr.isForSubcategories &&
+                selectedPath.includes(attr.categoryId)),
+          ),
         );
       } catch {
         setAttributes([]);
@@ -172,26 +189,33 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
   }, [selectedPath]);
 
   // ─── Fetch categories once ─────────────────────────────────────────────────
- useEffect(() => {
-  (async () => {
-    try {
-      const data = await fetchCategories();
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await fetchCategories();
 
-      const normalizeCategory = (cat: ICategory<string, string, string | null>): CategoryNode => ({
-        _id: cat._id || "",
-        categoryName: cat.categoryName,
-        parentId: typeof cat.parentId === "string" ? cat.parentId : cat.parentId?._id || null,
-        children: (cat.children || []).map(normalizeCategory),       
-      });
+        const normalizeCategory = (
+          cat: ICategory<string, string, string | null>,
+        ): CategoryNode => ({
+          _id: cat._id || "",
+          categoryName: cat.categoryName,
+          parentId:
+            typeof cat.parentId === "string"
+              ? cat.parentId
+              : cat.parentId?._id || null,
+          children: (cat.children || []).map(normalizeCategory),
+        });
 
-      const normalized: CategoryNode[] = (data.data ?? []).map(normalizeCategory);
+        const normalized: CategoryNode[] = (data.data ?? []).map(
+          normalizeCategory,
+        );
 
-      setFetchedCategories(normalized);
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-    }
-  })();
-}, []);
+        setFetchedCategories(normalized);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      }
+    })();
+  }, []);
 
   // ─── Category helpers ──────────────────────────────────────────────────────
   const handleCategorySelect = useCallback((level: number, value: string) => {
@@ -208,7 +232,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
 
   const selectedCategories = useMemo(
     () => getSelectedCategoryPath(fetchedCategories ?? [], selectedPath),
-    [fetchedCategories, selectedPath]
+    [fetchedCategories, selectedPath],
   );
 
   const getCategoriesAtLevelFromHook = useCallback(
@@ -216,7 +240,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
       Array.isArray(fetchedCategories)
         ? getCategoriesAtLevel(fetchedCategories, selectedPath, level)
         : [],
-    [fetchedCategories, selectedPath]
+    [fetchedCategories, selectedPath],
   );
 
   const getSelectedCategory = useCallback(
@@ -226,7 +250,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         ? (selectedCategories[level] ?? null)
         : selectedCategories[selectedCategories.length - 1];
     },
-    [selectedCategories]
+    [selectedCategories],
   );
 
   // ─── Step navigation ───────────────────────────────────────────────────────
@@ -239,7 +263,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
-    [currentStep]
+    [currentStep],
   );
 
   const prevStep = useCallback(() => {
@@ -254,9 +278,12 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
     setFormData((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const handleDynamicFieldChange = useCallback((fieldName: string, value: any) => {
-    setDynamicFields((prev) => ({ ...prev, [fieldName]: value }));
-  }, []);
+  const handleDynamicFieldChange = useCallback(
+    (fieldName: string, value: any) => {
+      setDynamicFields((prev) => ({ ...prev, [fieldName]: value }));
+    },
+    [],
+  );
 
   // ─── Image handlers ────────────────────────────────────────────────────────
   const handleImageUpload = useCallback(async (files: FileList | File[]) => {
@@ -267,7 +294,7 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         preview: URL.createObjectURL(file),
         name: file.name,
         base64: await fileToBase64(file),
-      }))
+      })),
     );
     setImages((prev) => [...prev, ...formatted]);
     // New local upload invalidates any stale server URLs
@@ -324,62 +351,94 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         categoryId: selectedPath.at(-1),
         categoryPath: selectedPath,
         attributes: variants.map((v: any) => {
-  // 1. EXACT PATH FIX: State ke andar se pricing object se values nikalen
-  const rawCost = v.pricing?.costPrice ?? 0;
-  const rawSelling = v.pricing?.sellingPrice ?? 0;
-  const rawRetail = v.pricing?.retailPrice ?? 0;
-  const rawDiscount = v.pricing?.discountPercentage ?? 0;
-  const rawTaxRate = v.pricing?.taxRate ?? 0;
+          // 1. EXACT PATH FIX: State ke andar se pricing object se values nikalen
+          const rawCost = v.pricing?.costPrice ?? 0;
+          const rawSelling = v.pricing?.sellingPrice ?? 0;
+          const rawRetail = v.pricing?.retailPrice ?? 0;
+          const rawDiscount = v.pricing?.discountPercentage ?? 0;
+          const rawTaxRate = v.pricing?.taxRate ?? 0;
 
-  // 2. Safely parse into numbers (kuch inputs string hain jaise "43" aur "54")
-  const costPrice = isNaN(Number(rawCost)) ? 0 : Number(rawCost);
-  const sellingPrice = isNaN(Number(rawSelling)) ? 0 : Number(rawSelling);
-  const retailPrice = isNaN(Number(rawRetail)) ? 0 : Number(rawRetail);
-  const discountPercentage = isNaN(Number(rawDiscount)) ? 0 : Number(rawDiscount);
-  const taxRate = isNaN(Number(rawTaxRate)) ? 0 : Number(rawTaxRate);
+          // 2. Safely parse into numbers (kuch inputs string hain jaise "43" aur "54")
+          const costPrice = isNaN(Number(rawCost)) ? 0 : Number(rawCost);
+          const sellingPrice = isNaN(Number(rawSelling))
+            ? 0
+            : Number(rawSelling);
+          const retailPrice = isNaN(Number(rawRetail)) ? 0 : Number(rawRetail);
+          const discountPercentage = isNaN(Number(rawDiscount))
+            ? 0
+            : Number(rawDiscount);
+          const taxRate = isNaN(Number(rawTaxRate)) ? 0 : Number(rawTaxRate);
 
-  // Zod schema check bypass (sellingPrice must be >= costPrice)
-  const validatedSellingPrice = sellingPrice >= costPrice ? sellingPrice : costPrice;
+          // Zod schema check bypass (sellingPrice must be >= costPrice)
+          const validatedSellingPrice =
+            sellingPrice >= costPrice ? sellingPrice : costPrice;
 
-  return {
-    sku: v.sku,
-    attributes: v.attributes || {},
-    
-    // Backend expects an array [ ]
-    pricing: [
-      {
-        costPrice: costPrice,
-        sellingPrice: validatedSellingPrice,
-        retailPrice: retailPrice,
-        discountPercentage: discountPercentage,
-        taxId: v.pricing?.taxId && v.pricing.taxId.trim() !== "" ? v.pricing.taxId : null,
-        taxRate: taxRate,
-        vatExempt: Boolean(v.pricing?.vatExempt),
-      }
-    ],
+          return {
+            sku: v.sku,
+            attributes: v.attributes || {},
 
-    stock: {
-      stockQuantity: isNaN(Number(v.stockQuantity)) ? 0 : Number(v.stockQuantity),
-      minStockLevel: isNaN(Number(v.minStockLevel)) ? 0 : Number(v.minStockLevel),
-      maxStockLevel: isNaN(Number(v.maxStockLevel)) ? 0 : Number(v.maxStockLevel),
-      reorderPoint: isNaN(Number(v.reorderPoint)) ? 0 : Number(v.reorderPoint),
-      safetyStock: isNaN(Number(v.safetyStock)) ? 0 : Number(v.safetyStock),
-      leadTimeDays: isNaN(Number(v.leadTimeDays)) ? 0 : Number(v.leadTimeDays),
-      stockLocation: v.stockLocation || "",
-      binLocation: v.binLocation || "",
-      featured: Boolean(v.featured),
-      warehouseId: v.warehouseId && v.warehouseId.trim() !== "" ? v.warehouseId : null,
-      productStatusId: v.productStatusId && v.productStatusId.trim() !== "" ? v.productStatusId : null,
-      conditionId: v.conditionId && v.conditionId.trim() !== "" ? v.conditionId : null,
-      supplierId: v.supplierId && v.supplierId.trim() !== "" ? v.supplierId : "000000000000000000000000",
-    },
+            // Backend expects an array [ ]
+            pricing: [
+              {
+                costPrice: costPrice,
+                sellingPrice: validatedSellingPrice,
+                retailPrice: retailPrice,
+                discountPercentage: discountPercentage,
+                taxId:
+                  v.pricing?.taxId && v.pricing.taxId.trim() !== ""
+                    ? v.pricing.taxId
+                    : null,
+                taxRate: taxRate,
+                vatExempt: Boolean(v.pricing?.vatExempt),
+              },
+            ],
 
-    warranty: {
-      warrantyType: v.warranty || "no_warranty",
-      warrantyPeriod: v.warrantyPeriod || "None",
-    },
-  };
-}),
+            stock: {
+              stockQuantity: isNaN(Number(v.stockQuantity))
+                ? 0
+                : Number(v.stockQuantity),
+              minStockLevel: isNaN(Number(v.minStockLevel))
+                ? 0
+                : Number(v.minStockLevel),
+              maxStockLevel: isNaN(Number(v.maxStockLevel))
+                ? 0
+                : Number(v.maxStockLevel),
+              reorderPoint: isNaN(Number(v.reorderPoint))
+                ? 0
+                : Number(v.reorderPoint),
+              safetyStock: isNaN(Number(v.safetyStock))
+                ? 0
+                : Number(v.safetyStock),
+              leadTimeDays: isNaN(Number(v.leadTimeDays))
+                ? 0
+                : Number(v.leadTimeDays),
+              stockLocation: v.stockLocation || "",
+              binLocation: v.binLocation || "",
+              featured: Boolean(v.featured),
+              warehouseId:
+                v.warehouseId && v.warehouseId.trim() !== ""
+                  ? v.warehouseId
+                  : null,
+              productStatusId:
+                v.productStatusId && v.productStatusId.trim() !== ""
+                  ? v.productStatusId
+                  : null,
+              conditionId:
+                v.conditionId && v.conditionId.trim() !== ""
+                  ? v.conditionId
+                  : null,
+              supplierId:
+                v.supplierId && v.supplierId.trim() !== ""
+                  ? v.supplierId
+                  : "000000000000000000000000",
+            },
+
+            warranty: {
+              warrantyType: v.warranty || "no_warranty",
+              warrantyPeriod: v.warrantyPeriod || "None",
+            },
+          };
+        }),
         // attributes: variants.map((v) => ({
         //   sku: v.sku,
         //   attributes: v.attributes,
@@ -424,14 +483,26 @@ export function useProductForm({ initialData, onSubmit, categories }: UseProduct
         toast.error("Failed to create product");
       }
     },
-    [formData, selectedPath, images, serverImageUrls, variants, onSubmit, router]
+    [
+      formData,
+      selectedPath,
+      images,
+      serverImageUrls,
+      variants,
+      onSubmit,
+      router,
+    ],
   );
 
   return {
     // Step
-    currentStep, nextStep, prevStep,
+    currentStep,
+    nextStep,
+    prevStep,
     // Form
-    formData, handleInputChange, handleSubmit,
+    formData,
+    handleInputChange,
+    handleSubmit,
     // Categories
     selectedPath,
     fetchedCategories: fetchedCategories ?? [],

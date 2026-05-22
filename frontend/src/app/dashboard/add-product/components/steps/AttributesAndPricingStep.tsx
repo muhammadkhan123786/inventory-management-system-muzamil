@@ -18,20 +18,16 @@ import {
   Save, Store, ShoppingBag, EyeOff, XCircle, ChevronRight,
   Package, ClipboardList, Tag, ShieldAlert, DollarSign,
 } from 'lucide-react';
-import { useState, useRef, useCallback } from 'react';
-
+import { useState, useRef, useEffect } from 'react';
 
 import { AttributesSection } from '../sections/AttributesSection';
 import { PricingSection } from '../sections/PricingSection';
 import { InventorySection } from '../sections/InventorySection';
 import { WarrantySection } from '../sections/WarrantySection';
-
 import { Input } from '@/components/form/Input';
-
-
+import { Button } from '@/components/form/CustomButton';
 
 import { useCurrencyStore } from "@/stores/currency.store";
-
 import { ProductVariant } from '../../hooks/useProductForm';
 import { toast } from 'sonner';
 
@@ -69,6 +65,17 @@ interface AttributesAndPricingStepProps {
   getAllFields?: () => any[];
   variants: ProductVariant[];
   setVariants: React.Dispatch<React.SetStateAction<ProductVariant[]>>;
+
+  persistedSku: string;
+  onSkuChange: (sku: string) => void;
+  persistedAttributes: Record<string, any>;
+  onAttributesChange: (attrs: Record<string, any>) => void;
+  persistedPricing: SimplePricing;
+  onPricingChange: (pricing: SimplePricing) => void;
+  persistedStock: Partial<ProductVariant>;
+  onStockChange: (stock: Partial<ProductVariant>) => void;
+  persistedWarranty: { warranty: string; warrantyPeriod: string };
+  onWarrantyChange: (warranty: { warranty: string; warrantyPeriod: string }) => void;
 }
 
 // ─── Section label map ─────────────────────────────────────────────────────────
@@ -79,7 +86,7 @@ const SECTION_META = {
   warranty: { label: 'Warranty', icon: ShieldAlert, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
 } as const;
 
-// ─── Professional Validation Error Panel ───────────────────────────────────────
+// ─── Validation Panel ───────────────────────────────────────────────────────
 function ValidationPanel({
   issues,
   onDismiss,
@@ -112,7 +119,7 @@ function ValidationPanel({
             <XCircle className="h-5 w-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold text-white">Variant Cannot Be Added</p>
+            <p className="text-sm font-bold text-white">Form Cannot Be Submitted</p>
             <p className="text-xs text-red-100">
               {errorCount} error{errorCount !== 1 ? 's' : ''}
               {warningCount > 0 && ` · ${warningCount} warning${warningCount !== 1 ? 's' : ''}`}
@@ -165,18 +172,27 @@ function ValidationPanel({
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 export function AttributesAndPricingStep({
- 
   attributes = [],
-   taxes = [],
+  taxes = [],
   warehouses = [],
   warehouseStatus = [],
   productStatus = [],
   conditions = [],
-  
   setVariants,
+
+  // Persisted props from parent
+  persistedSku,
+  onSkuChange,
+  persistedAttributes,
+  onAttributesChange,
+  persistedPricing,
+  onPricingChange,
+  persistedStock,
+  onStockChange,
+  persistedWarranty,
+  onWarrantyChange,
 }: AttributesAndPricingStepProps) {
 
-  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -188,31 +204,104 @@ export function AttributesAndPricingStep({
   const panelRef = useRef<HTMLDivElement>(null);
   const currencySymbol = useCurrencyStore((s) => s.currencySymbol);
 
-
-
-  const [variantId, setVariantId] = useState<string>('');
-
-  // Simple pricing state (no marketplace)
-  const [pricing, setPricing] = useState<SimplePricing>({
-    costPrice: 0,
-    sellingPrice: 0,
-    retailPrice: 0,
-    discountPercentage: 0,
-    taxId: '',
-    taxRate: 0,
-    vatExempt: false,
-  });
+  // ✅ FIX: Initialize state with persisted values from parent
+  const [pricing, setPricing] = useState<SimplePricing>(persistedPricing);
 
   const [currentVariant, setCurrentVariant] = useState<Partial<ProductVariant>>({
-    sku: '', attributes: {},
-    stockQuantity: 0, minStockLevel: 0, maxStockLevel: 0, reorderPoint: 0,
-    stockLocation: '', warehouseId: '', binLocation: '',
-    productStatusId: '', conditionId: '', warehouseStatusId: '',
-    supplierId: '',
-    featured: false, safetyStock: 0, leadTimeDays: 0, warranty: '', warrantyPeriod: '',
+    sku: persistedSku,
+    attributes: persistedAttributes,
+    stockQuantity: persistedStock.stockQuantity || 0,
+    minStockLevel: persistedStock.minStockLevel || 0,
+    maxStockLevel: persistedStock.maxStockLevel || 0,
+    reorderPoint: persistedStock.reorderPoint || 0,
+    safetyStock: persistedStock.safetyStock || 0,
+    leadTimeDays: persistedStock.leadTimeDays || 0,
+    stockLocation: persistedStock.stockLocation || '',
+    warehouseId: persistedStock.warehouseId || '',
+    binLocation: persistedStock.binLocation || '',
+    productStatusId: persistedStock.productStatusId || '',
+    conditionId: persistedStock.conditionId || '',
+    supplierId: persistedStock.supplierId || '',
+    warehouseStatusId: persistedStock.warehouseStatusId || '',
+    featured: persistedStock.featured || false,
+    warranty: persistedWarranty.warranty || '',
+    warrantyPeriod: persistedWarranty.warrantyPeriod || '',
   });
 
   const hasDynamicFields = attributes && attributes.length > 0;
+
+  // ✅ Update parent when local state changes (SKU)
+  useEffect(() => {
+    onSkuChange(currentVariant.sku || '');
+  }, [currentVariant.sku, onSkuChange]);
+
+  // ✅ Update parent when attributes change
+  useEffect(() => {
+    onAttributesChange(currentVariant.attributes || {});
+  }, [currentVariant.attributes, onAttributesChange]);
+
+  // ✅ Update parent when pricing changes
+  useEffect(() => {
+    onPricingChange(pricing);
+  }, [pricing, onPricingChange]);
+
+  // ✅ Update parent when stock changes
+  useEffect(() => {
+    const stockData = {
+      stockQuantity: currentVariant.stockQuantity,
+      minStockLevel: currentVariant.minStockLevel,
+      maxStockLevel: currentVariant.maxStockLevel,
+      reorderPoint: currentVariant.reorderPoint,
+      safetyStock: currentVariant.safetyStock,
+      leadTimeDays: currentVariant.leadTimeDays,
+      stockLocation: currentVariant.stockLocation,
+      warehouseId: currentVariant.warehouseId,
+      binLocation: currentVariant.binLocation,
+      productStatusId: currentVariant.productStatusId,
+      conditionId: currentVariant.conditionId,
+      supplierId: currentVariant.supplierId,
+      warehouseStatusId: currentVariant.warehouseStatusId,
+      featured: currentVariant.featured,
+    };
+    onStockChange(stockData);
+  }, [currentVariant, onStockChange]);
+
+  // ✅ Update parent when warranty changes
+  useEffect(() => {
+    onWarrantyChange({
+      warranty: currentVariant.warranty || '',
+      warrantyPeriod: currentVariant.warrantyPeriod || '',
+    });
+  }, [currentVariant.warranty, currentVariant.warrantyPeriod, onWarrantyChange]);
+
+  // ✅ Update parent variants state (for final submission)
+  useEffect(() => {
+    const variant: ProductVariant = {
+      id: `variant-${Date.now()}`,
+      sku: currentVariant.sku || '',
+      attributes: currentVariant.attributes || {},
+      marketplacePricing: [],
+      pricing: { ...pricing },
+      stockQuantity: Number(currentVariant.stockQuantity || 0),
+      minStockLevel: Number(currentVariant.minStockLevel || 0),
+      maxStockLevel: Number(currentVariant.maxStockLevel || 0),
+      reorderPoint: Number(currentVariant.reorderPoint || 0),
+      safetyStock: Number(currentVariant.safetyStock || 0),
+      leadTimeDays: Number(currentVariant.leadTimeDays || 0),
+      stockLocation: currentVariant.stockLocation || '',
+      warehouseId: currentVariant.warehouseId || '',
+      binLocation: currentVariant.binLocation || '',
+      productStatusId: currentVariant.productStatusId || '',
+      conditionId: currentVariant.conditionId || '',
+      supplierId: currentVariant.supplierId || '',
+      warehouseStatusId: currentVariant.warehouseStatusId || '',
+      featured: currentVariant.featured || false,
+      warranty: currentVariant.warranty || '',
+      warrantyPeriod: currentVariant.warrantyPeriod || '',
+    };
+    
+    setVariants([variant]);
+  }, [currentVariant, pricing, setVariants]);
 
   const handleAttributeChange = (fieldId: string, value: any) =>
     setCurrentVariant(p => ({ ...p, attributes: { ...p.attributes, [fieldId]: value } }));
@@ -231,7 +320,8 @@ export function AttributesAndPricingStep({
   const handleVatExemptChange = (v: boolean) =>
     setPricing(p => ({ ...p, vatExempt: v }));
 
-  const addVariant = () => {
+  // Validate the form before main submission
+  const validateForm = (): boolean => {
     setSubmitAttempted(true);
     const issues: ValidationIssue[] = [];
 
@@ -246,7 +336,7 @@ export function AttributesAndPricingStep({
       });
     });
 
-    // Pricing validation - simple check
+    // Pricing validation
     if (!pricing.costPrice || pricing.costPrice <= 0) {
       issues.push({
         section: 'pricing',
@@ -282,74 +372,30 @@ export function AttributesAndPricingStep({
       });
     }
 
+    // SKU validation
+    if (!currentVariant.sku) {
+      issues.push({
+        section: 'attributes',
+        field: 'sku',
+        severity: 'error',
+        message: 'SKU is required.'
+      });
+    }
+
     const blockingIssues = issues.filter(i => i.severity === 'error');
 
     if (blockingIssues.length > 0) {
       setValidationIssues(issues);
       setShowValidation(true);
       setTimeout(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-      return;
+      return false;
     }
 
-    // Create variant with simple pricing
-    const newVariant: any = {
-      id: editingVariantId || variantId,
-      sku: currentVariant.sku || '',
-      attributes: currentVariant.attributes || {},
-      pricing: { ...pricing },
-      stockQuantity: Number(currentVariant.stockQuantity || 0),
-      minStockLevel: Number(currentVariant.minStockLevel || 0),
-      maxStockLevel: Number(currentVariant.maxStockLevel || 0),
-      reorderPoint: Number(currentVariant.reorderPoint || 0),
-      safetyStock: Number(currentVariant.safetyStock || 0),
-      leadTimeDays: Number(currentVariant.leadTimeDays || 0),
-      stockLocation: currentVariant.stockLocation || '',
-      warehouseId: currentVariant.warehouseId || '',
-      binLocation: currentVariant.binLocation || '',
-      productStatusId: currentVariant.productStatusId || '',
-      conditionId: currentVariant.conditionId || '',
-      supplierId: currentVariant.supplierId || '',
-      warehouseStatusId: currentVariant.warehouseStatusId || '',
-      featured: currentVariant.featured || false,
-      warranty: currentVariant.warranty || '',
-      warrantyPeriod: currentVariant.warrantyPeriod || '',
-    };
-
-    if (editingVariantId) {
-      setVariants(p => p.map(v => v.id === editingVariantId ? newVariant : v));
-      setEditingVariantId(null);
-    } else {
-      setVariants(p => [...p, newVariant]);
-    }
-
-    toast.success(editingVariantId ? 'Variant updated successfully!' : 'Variant added successfully!');
     setShowValidation(false);
-    setSubmitAttempted(false);
     setValidationIssues([]);
-    resetForm();
+    return true;
   };
 
-  const resetForm = () => {
-    setVariantId(`variant-${Date.now()}`);
-    setCurrentVariant({
-      sku: '', attributes: {},
-      stockQuantity: 0, minStockLevel: 0, maxStockLevel: 0, reorderPoint: 0,
-      stockLocation: '', warehouseId: '', binLocation: '',
-      supplierId: '', productStatusId: '', conditionId: '', warehouseStatusId: '',
-      featured: false, safetyStock: 0, leadTimeDays: 0, warranty: '', warrantyPeriod: '',
-    });
-    setPricing({
-      costPrice: 0, sellingPrice: 0, retailPrice: 0,
-      discountPercentage: 0, taxId: '', taxRate: 0, vatExempt: false,
-    });
-    setShowValidation(false);
-    setSubmitAttempted(false);
-    setValidationIssues([]);
-  };
-
- 
-
- 
   return (
     <motion.div
       key="step3"
@@ -375,7 +421,7 @@ export function AttributesAndPricingStep({
             </motion.div>
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                Product Variants Configuration
+                Product Configuration
               </h2>
               <p className="text-sm text-gray-600">Configure attributes, pricing, stock and warranty</p>
             </div>
@@ -386,8 +432,29 @@ export function AttributesAndPricingStep({
               <div>
                 <h4 className="text-md font-bold text-gray-800 mb-6 flex items-center gap-2">
                   <Star className="h-5 w-5 text-orange-500" />
-                  {editingVariantId ? 'Edit Product Variant' : 'Add New Product Variant'}
+                  Product Details
                 </h4>
+
+                {/* Validation Panel */}
+                <AnimatePresence>
+                  {showValidation && validationIssues.length > 0 && (
+                    <div ref={panelRef} className="mb-6">
+                      <ValidationPanel
+                        issues={validationIssues}
+                        onDismiss={() => setShowValidation(false)}
+                        onScrollTo={(section) => {
+                          const map = {
+                            attributes: attributesRef,
+                            pricing: pricingRef,
+                            inventory: inventoryRef,
+                            warranty: warrantyRef,
+                          };
+                          map[section].current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                      />
+                    </div>
+                  )}
+                </AnimatePresence>
 
                 {/* SKU */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-200">
@@ -412,7 +479,7 @@ export function AttributesAndPricingStep({
                     </p>
                   )}
                   <p className="text-xs text-gray-600 mt-2">
-                    Unique identifier for this variant (e.g., PRODUCT-COLOR-SIZE-###)
+                    Unique identifier for this product
                   </p>
                 </div>
 
@@ -441,7 +508,7 @@ export function AttributesAndPricingStep({
                   )}
                 </div>
 
-                {/* Simple Pricing Section - No Marketplace */}
+                {/* Pricing Section */}
                 <div className="mb-6" ref={pricingRef}>
                   <div className="flex items-center gap-2 mb-4">
                     <DollarSign className="h-5 w-5 text-green-600" />
@@ -505,12 +572,9 @@ export function AttributesAndPricingStep({
                     </div>
                   )}
                 </div>
-
-              
               </div>
             </div>
-          ) : 
-          (
+          ) : (
             <div className="p-12 text-center bg-gradient-to-r from-gray-50 to-slate-100 rounded-2xl border-2 border-gray-200">
               <div className="inline-block mb-4">
                 <div className="h-20 w-20 rounded-full bg-gradient-to-r from-gray-200 to-slate-300 flex items-center justify-center">
@@ -521,7 +585,6 @@ export function AttributesAndPricingStep({
               <p className="text-gray-500 mb-4">Please select a category in Step 1 to see available attributes</p>
             </div>
           )}
-
         </CardContent>
       </Card>
     </motion.div>

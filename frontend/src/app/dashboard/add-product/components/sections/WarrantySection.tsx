@@ -23,7 +23,7 @@ export function WarrantySection({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Warranty Type
+            Warranty Type <span className="text-red-500">*</span>
           </label>
           <Input
             type="text"
@@ -36,7 +36,7 @@ export function WarrantySection({
 
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Warranty Period
+            Warranty Period <span className="text-red-500">*</span>
           </label>
           <Select
             value={currentVariant.warrantyPeriod}
